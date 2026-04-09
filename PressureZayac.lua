@@ -38,7 +38,7 @@ local Window = Rayfield:CreateWindow({
         InputStroke = Color3.fromRGB(40, 75, 150),
         PlaceholderColor = Color3.fromRGB(100, 140, 200),
     },
-    ToggleUIKeybind = "K",
+    ToggleUIKeybind = "R",
     DisableRayfieldPrompts = false,
     DisableBuildWarnings = false,
     ConfigurationSaving = { Enabled = true, FolderName = "Pressure", FileName = "Pressure" },
@@ -1248,6 +1248,51 @@ Move:CreateToggle({
         end
     end
 })
+
+local speedActive = false
+local speedValue = 22
+local speedLoop = nil
+local speedKey = Enum.KeyCode.V
+
+Move:CreateSection("Movement")
+
+local SpeedToggle = Move:CreateToggle({
+    Name = "Speed Hack (Key: V)",
+    CurrentValue = false,
+    Flag = "SpeedHack",
+    Callback = function(Value)
+        speedActive = Value
+        if Value then
+            if not speedLoop then
+                speedLoop = RunService.Heartbeat:Connect(function()
+                    if not speedActive then return end
+                    local char = Player.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
+                    
+                    if root and hum and hum.MoveDirection.Magnitude > 0 then
+                        -- Метод через CFrame: він буквально "штовхає" тебе вперед
+                        char:TranslateBy(hum.MoveDirection * (speedValue / 100))
+                    end
+                end)
+            end
+        else
+            if speedLoop then
+                speedLoop:Disconnect()
+                speedLoop = nil
+            end
+        end
+    end
+})
+
+-- Обробка клавіші V (залишаємо як було)
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == speedKey then
+        speedActive = not speedActive
+        SpeedToggle:Set(speedActive)
+    end
+end)
 
 
 -- ================================================
