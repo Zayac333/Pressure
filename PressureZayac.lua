@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
     Name = "ZayacHub",
     Icon = 0,
-    LoadingTitle = "Pressure|Script",
+    LoadingTitle = "Pressure",
     LoadingSubtitle = "by Zayac",
     Theme = {
         TextColor = Color3.fromRGB(200, 225, 255),
@@ -45,6 +45,9 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
+-- ================================================
+-- GARANTE QUE O PERSONAGEM ESTÁ LIMPO AO INICIAR
+-- ================================================
 local function CleanupCharacter(char)
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -61,11 +64,11 @@ local Player      = Players.LocalPlayer
 local RunService  = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-
+-- Movement variables
 local noclipActive = false
 local noclipLoop = nil
 
-
+-- Limpa ao carregar e a cada respawn
 CleanupCharacter(Player.Character)
 Player.CharacterAdded:Connect(CleanupCharacter)
 
@@ -207,116 +210,138 @@ end
 -- ESP FUNCTIONS
 -- ================================================
 
-local Workspace = game:GetService("Workspace")
-local Rooms = Workspace:FindFirstChild("Rooms") or Workspace:FindFirstChild("CurrentRooms")
-local WHITE = Color3.new(1, 1, 1)
-
--- [[ 1. СИСТЕМА ВІЗУАЛІЗАЦІЇ (ESP) ]] --
-
 local function AddESP(part, config)
     if not part or not part.Parent then return end
-    if part:FindFirstChild("ESP_Container") then return end 
+    if part:FindFirstChildOfClass("Highlight") then return end
 
-    local container = Instance.new("Folder")
-    container.Name = "ESP_Container"
-    container.Parent = part
-
-    -- Підсвітка (Highlight)
     local h = Instance.new("Highlight")
     h.Adornee = part
-    h.FillColor = config.fill or Color3.new(0, 1, 0)
+    h.FillColor = config.fill
     h.OutlineColor = config.outline or WHITE
     h.FillTransparency = config.fillTransparency or 0.4
     h.OutlineTransparency = 0
-    h.Parent = container
+    h.Parent = part
 
-    -- Текст (BillboardGui)
     local bb = Instance.new("BillboardGui")
     bb.Name = "ESP_Label"
     bb.Adornee = part
     bb.AlwaysOnTop = true
     bb.Size = UDim2.new(0, 140, 0, 40)
     bb.StudsOffset = Vector3.new(0, 3, 0)
-    bb.Parent = container
+    bb.Parent = part
 
     local lbl = Instance.new("TextLabel")
-    lbl.Text = config.label or "Object"
+    lbl.Text = config.label
     lbl.Size = UDim2.new(1, 0, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.TextColor3 = config.textColor or WHITE
+    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     lbl.TextStrokeTransparency = 0.3
     lbl.TextScaled = true
     lbl.Font = Enum.Font.GothamBold
     lbl.Parent = bb
 
-    -- Оптимізація: Автовидалення (наприклад, для дверей)
-    if config.autoDelete then
-        task.delay(30, function()
-            if container then container:Destroy() end
-        end)
-    end
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = config.outline or WHITE
+    stroke.Thickness = 1.5
+    stroke.Parent = lbl
 end
+-- Додай це в розділ, де створюються функції ESP
+Esp:CreateToggle({
+   Name = "Door ESP (30s)",
+   CurrentValue = false,
+   Flag = "DoorEspToggle",
+   Callback = function(Value)
+      _G.DoorESP = Value
+      if Value then
+         task.spawn(function()
+            while _G.DoorESP do
+               pcall(function()
+                  for _, m in pairs(workspace:GetDescendants()) do
+                     if (m.Name == "Door" or m.Name == "NormalDoor") and m:IsA("Model") then
+                        -- Спроба знайти номер кімнати
+                        local roomNum = m.Parent.Name:match("%d+") or "Door"
+                        -- Виклик функції створення підсвітки (переконайся, що CreateSmartESP є в коді)
+                        CreateSmartESP(m, "DOOR ["..roomNum.."]", Color3.fromRGB(0, 255, 0), "ZayacVisual")
+                     end
+                  end
+               end)
+               task.wait(2)
+            end
+         end)
+      else
+         -- Очищення при вимкненні
+         for _, v in pairs(workspace:GetDescendants()) do
+            if v.Name == "ZayacVisual" then v:Destroy() end
+         end
+      end
+   end,
+})
 
 local function RemoveESP(part)
     if not part then return end
-    local container = part:FindFirstChild("ESP_Container")
-    if container then container:Destroy() end
+    local h = part:FindFirstChildOfClass("Highlight")
+    if h then h:Destroy() end
+    local b = part:FindFirstChild("ESP_Label")
+    if b then b:Destroy() end
 end
 
--- [[ 2. УНІВЕРСАЛЬНИЙ СКАНЕР (Rooms & Workspace) ]] --
-
-local function ScanObjects(enabledFn, matchFn, onFound)
+local function ScanRooms(enabled, matchFn, onFound)
     local connections = {}
-    
-    local function process(d)
-        if not enabledFn() or not d.Parent then return end
+    local scanned = {}
+
+    local function processDesc(d)
+        if scanned[d] then return end
+        scanned[d] = true
+        if not d.Parent then return end
         local config = matchFn(d.Name)
         if config then
-            -- Знаходимо найкращу точку для кріплення ESP
-            local target = d:FindFirstChild("ProxyPart") or (d:IsA("Model") and d.PrimaryPart) or d
+            local target = d:FindFirstChild("ProxyPart") or d
             onFound(target, config)
         end
     end
 
-    -- Сканування кімнат (якщо вони є)
-    if Rooms then
-        for _, room in ipairs(Rooms:GetChildren()) do
-            for _, d in ipairs(room:GetDescendants()) do process(d) end
-            table.insert(connections, room.DescendantAdded:Connect(function(d)
-                task.wait(0.1)
-                process(d)
-            end))
+    local function scanRoom(room)
+        for _, d in ipairs(room:GetDescendants()) do
+            if not enabled() then break end
+            processDesc(d)
         end
-        
-        table.insert(connections, Rooms.ChildAdded:Connect(function(room)
-            task.wait(0.5)
-            for _, d in ipairs(room:GetDescendants()) do process(d) end
-            table.insert(connections, room.DescendantAdded:Connect(function(d)
-                task.wait(0.1)
-                process(d)
-            end))
+    end
+
+    for _, room in ipairs(Rooms:GetChildren()) do
+        if not enabled() then break end
+        task.defer(function() scanRoom(room) end)
+        table.insert(connections, room.DescendantAdded:Connect(function(d)
+            task.wait(0.1)
+            if enabled() then processDesc(d) end
         end))
     end
+
+    table.insert(connections, Rooms.ChildAdded:Connect(function(room)
+        task.wait(0.3)
+        if not enabled() then return end
+        scanRoom(room)
+        table.insert(connections, room.DescendantAdded:Connect(function(d)
+            task.wait(0.1)
+            if enabled() then processDesc(d) end
+        end))
+    end))
 
     return connections
 end
 
--- [[ 3. ФУНКЦІЇ ДЛЯ ТАБІВ (RAYFIELD) ]] --
-
--- Створює перемикач для ESP будь-чого
-function CreateESPToggle(tab, name, flag, matchFn)
+local function CreateESPToggle(tab, name, flag, matchFn)
     local connections = {}
-    local targets = {}
     local active = false
+    local targets = {}
 
     tab:CreateToggle({
-        Name = name,
-        CurrentValue = false,
-        Flag = flag,
-        Callback = function(Value)
+        Name=name, CurrentValue=false, Flag=flag,
+        Callback=function(Value)
             active = Value
             if Value then
-                connections = ScanObjects(
+                targets = {}
+                connections = ScanRooms(
                     function() return active end,
                     matchFn,
                     function(target, config)
@@ -327,34 +352,40 @@ function CreateESPToggle(tab, name, flag, matchFn)
             else
                 for _, c in ipairs(connections) do c:Disconnect() end
                 connections = {}
-                for _, t in ipairs(targets) do pcall(RemoveESP, t) end
+                for _, target in ipairs(targets) do pcall(RemoveESP, target) end
                 targets = {}
             end
         end
     })
 end
 
--- Створює перемикач для видалення будь-чого (Anti-Trap)
-function CreateAntiToggle(tab, name, flag, matchFn)
-    local conns = {}
+local function CreateAntiToggle(tab, name, flag, matchFn)
+    local conns  = {}
     local active = false
 
     tab:CreateToggle({
-        Name = name,
-        CurrentValue = false,
-        Flag = flag,
-        Callback = function(Value)
+        Name=name, CurrentValue=false, Flag=flag,
+        Callback=function(Value)
             active = Value
             if Value then
-                local function clean(d)
-                    if active and matchFn(d.Name) then
-                        pcall(function() d:Destroy() end)
-                    end
+                local function destroyIfMatch(d)
+                    if not active then return end
+                    if matchFn(d.Name) then pcall(function() d:Destroy() end) end
                 end
-                for _, d in ipairs(workspace:GetDescendants()) do clean(d) end
-                table.insert(conns, workspace.DescendantAdded:Connect(function(d)
-                    task.wait(0.05)
-                    clean(d)
+                local function setupRoom(room)
+                    task.defer(function()
+                        if not active then return end
+                        for _, d in ipairs(room:GetDescendants()) do destroyIfMatch(d) end
+                    end)
+                    table.insert(conns, room.DescendantAdded:Connect(function(d)
+                        task.wait(0.05)
+                        if active then destroyIfMatch(d) end
+                    end))
+                end
+                for _, room in ipairs(Rooms:GetChildren()) do setupRoom(room) end
+                table.insert(conns, Rooms.ChildAdded:Connect(function(room)
+                    task.wait(0.3)
+                    if active then setupRoom(room) end
                 end))
             else
                 for _, c in ipairs(conns) do c:Disconnect() end
@@ -363,14 +394,7 @@ function CreateAntiToggle(tab, name, flag, matchFn)
         end
     })
 end
--- [[ ПРИКЛАД ВИКОРИСТАННЯ (ДОДАТИ В ТАБИ) ]] --
 
--- Для дверей:
--- matchFn = function(name) 
---    if name == "Door" then 
---        return {label = "Door", fill = Color3.new(0,1,0), autoDelete = true} 
---    end 
--- end
 -- ================================================
 -- VISUALS TAB
 -- ================================================
@@ -522,6 +546,7 @@ Esp:CreateToggle({
     end
 })
 
+-- Monster ESP — corrigido para Ridge variants e múltiplos containers
 local monsterEspConns, monsterEspActive = {}, false
 Esp:CreateToggle({
     Name="Monster ESP", CurrentValue=false, Flag="EspMonster",
@@ -548,6 +573,7 @@ Esp:CreateToggle({
             end))
         end
 
+        -- Escaneia workspace inteiro para pegar Ridge e outros que spawnam fora de Monsters
         local function scanWorkspace()
             for _, child in ipairs(workspace:GetChildren()) do
                 if MONSTERS[child.Name] then applyESP(child) end
@@ -562,7 +588,7 @@ Esp:CreateToggle({
 
         if Value then
             scanWorkspace()
-                
+            -- Também escaneia GameplayFolder.Monsters
             for _, child in ipairs(workspace.GameplayFolder.Monsters:GetChildren()) do
                 if MONSTERS[child.Name] then applyESP(child) end
             end
@@ -582,154 +608,28 @@ Esp:CreateToggle({
     end
 })
 
-
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-
-
-local playerGui = player:WaitForChild("PlayerGui")
-
-local scriptEnabled = true
-local activeMonsters = {}
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MonsterSystemFinal"
-screenGui.IgnoreGuiInset = true
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
-
-local alertLabel = Instance.new("TextLabel")
-alertLabel.Size = UDim2.new(1, 0, 0.2, 0)
-alertLabel.Position = UDim2.new(0, 0, 0.25, 0)
-alertLabel.BackgroundTransparency = 1
-alertLabel.Text = ""
-alertLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-alertLabel.TextSize = 45
-alertLabel.Font = Enum.Font.LuckiestGuy
-alertLabel.Parent = screenGui
-
-local function notify(text, color)
-    local note = Instance.new("TextLabel")
-    note.Size = UDim2.new(0, 300, 0, 50)
-    note.Position = UDim2.new(0.5, -150, 0.8, 0)
-    note.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    note.TextColor3 = color
-    note.Text = text
-    note.TextSize = 25
-    note.Font = Enum.Font.SourceSansBold
-    note.Parent = screenGui
-    Instance.new("UICorner", note)
-    task.delay(2, function()
-        TweenService:Create(note, TweenInfo.new(0.5), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
-        task.wait(0.5)
-        note:Destroy()
-    end)
-end
-
-local function applyVisuals(monster)
-    local root = monster:IsA("Model") and (monster.PrimaryPart or monster:FindFirstChildWhichIsA("BasePart")) or monster
-    if not root then return end
-
-    if not monster:FindFirstChild("MonsterHighlight") then
-        local hl = Instance.new("Highlight", monster)
-        hl.Name = "MonsterHighlight"
-        hl.FillColor = Color3.fromRGB(255, 0, 0)
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    end
-    
-    if not monster:FindFirstChild("MonsterTracer") then
-        local att0 = Instance.new("Attachment", root)
-        local beam = Instance.new("Beam", monster)
-        beam.Name = "MonsterTracer"
-        beam.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0))
-        beam.Width0, beam.Width1 = 1, 1
-        beam.Attachment0 = att0
-        
-        local pRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if pRoot then
-            local pAtt = pRoot:FindFirstChild("MT_Att") or Instance.new("Attachment", pRoot)
-            pAtt.Name = "MT_Att"
-            beam.Attachment1 = pAtt
-        end
-    end
-
-    if not monster:FindFirstChild("MonsterSphere") then
-        local sphere = Instance.new("SelectionSphere")
-        sphere.Name = "MonsterSphere"
-        sphere.Adornee = root
-        sphere.Color3 = Color3.fromRGB(255, 0, 0)
-        sphere.Transparency = 0.6
-        sphere.Parent = monster
-    end
-end
-
--- 3. ДЕТЕКЦІЯ (ДОДАНО БЛЕКЛІСТ)
-local function checkMonster(child)
-    task.wait(0.2)
-    if not scriptEnabled or not child or not child.Parent then return end
-    
-    local name = child.Name:lower()
-    -- Твій новий блекліст тут:
-    if name:find("orb") or name:find("ambience") or name:find("light") or name:find("proxy") or name:find("vent") then 
-        return 
-    end
-    
-    if (child:IsA("Model") or child:IsA("BasePart")) and not Players:GetPlayerFromCharacter(child) then
-        local inEntities = child.Parent.Name == "Entities" or child.Parent.Name == "Monsters"
-        local hasSound = child:FindFirstChildOfClass("Sound", true)
-        
-        if (inEntities or hasSound) then
-            local id = child:GetDebugId()
-            if not activeMonsters[id] then
-                activeMonsters[id] = {instance = child, name = child.Name, startTime = tick()}
+-- Monster Alert — corrigido para Ridge variants
+local monsterAlertConns, monsterAlertActive = {}, false
+Esp:CreateToggle({
+    Name="Monster Alert", CurrentValue=false, Flag="MonsterAlert",
+    Callback=function(Value)
+        monsterAlertActive = Value
+        if Value then
+            local function listenContainer(container)
+                table.insert(monsterAlertConns, container.ChildAdded:Connect(function(child)
+                    if monsterAlertActive and MONSTERS[child.Name] then
+                        NotifyOnce(child.Name, "⚠️ Monster!", child.Name .. " spawned!", 5, "alert-triangle")
+                    end
+                end))
             end
-        end
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    local text = ""
-    local currentTime = tick()
-    
-    if scriptEnabled then
-        for id, data in pairs(activeMonsters) do
-            local duration = currentTime - data.startTime
-            
-            if duration > 60 or not data.instance or not data.instance.Parent then
-                activeMonsters[id] = nil
-            else
-                local root = data.instance:IsA("Model") and (data.instance.PrimaryPart or data.instance:FindFirstChildWhichIsA("BasePart")) or data.instance
-                if root and player.Character and player.Character.PrimaryPart then
-                    local dist = math.floor((root.Position - player.Character.PrimaryPart.Position).Magnitude)
-                    if dist < 1500 then
-                        text = text .. "⚠️ " .. data.name:upper() .. " [" .. dist .. "m] - " .. math.floor(duration) .. "s\n"
-                        applyVisuals(data.instance)
-                    else activeMonsters[id] = nil end
-                end
-            end
-        end
-        alertLabel.Text = text
-    else
-        alertLabel.Text = ""
-    end
-end)
-
-workspace.ChildAdded:Connect(checkMonster)
-
-UserInputService.InputBegan:Connect(function(input, proc)
-    if proc then return end
-    if input.KeyCode == Enum.KeyCode.B then
-        scriptEnabled = not scriptEnabled
-        if scriptEnabled then
-            notify("Скрипт увімкнено", Color3.fromRGB(0, 255, 0))
+            listenContainer(workspace)
+            listenContainer(workspace.GameplayFolder.Monsters)
         else
-            notify("Скрипт відключено", Color3.fromRGB(255, 0, 0))
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v.Name == "MonsterHighlight" or v.Name == "MonsterTracer" or v.Name == "MonsterSphere" then v:Destroy() end
-            end
+            for _, c in ipairs(monsterAlertConns) do c:Disconnect() end
+            monsterAlertConns = {}
         end
     end
-end)
+})
 
 Esp:CreateSection("World")
 
@@ -946,7 +846,7 @@ Auto:CreateToggle({
 -- ================================================
 
 local lootAuraActive = false
-local lootAuraRadius = 10
+local lootAuraRadius = 15
 local lootAuraLoop = nil
 local lootAuraCache = {}
 local lootAuraLastScan = 0
@@ -983,7 +883,7 @@ local function CollectNearbyItems()
     local root = GetRootPart()
     if not root then return end
 
-
+    -- Rebuild cache every 2 seconds only instead of scanning every frame
     local now = tick()
     if now - lootAuraLastScan > 2 then
         BuildLootCache()
@@ -1141,6 +1041,7 @@ local function SolveKeypad(keypad)
             local dir = (targetPos - root.Position).Unit
             local approachPos = targetPos - (dir * 4)
 
+            -- Teleport within 7 stud validation range
             root.CFrame = CFrame.new(approachPos + Vector3.new(0, 3, 0))
             task.wait(0.2)
 
@@ -1356,11 +1257,12 @@ Move:CreateToggle({
 Anti:CreateSection("Monsters")
 
 Anti:CreateToggle({
-     Name = "Anti-Shark Protection",
-     CurrentValue = false,
-     Callback = function(Value)
-       _G.AntiShark = Value
-       task.spawn(function()
+   Name = "Anti-Shark Protection",
+   CurrentValue = false,
+   Flag = "AntiSharkToggle",
+   Callback = function(Value)
+      _G.AntiShark = Value
+      task.spawn(function()
          while _G.AntiShark do
             pcall(function()
                for _, v in pairs(workspace.CurrentCamera:GetChildren()) do
@@ -1374,12 +1276,12 @@ Anti:CreateToggle({
                   if static then static.Visible = false end
                end
             end)
-            task.wait(0.2)
+            task.wait(0.1)
          end
       end)
    end,
 })
-      
+
 Anti:CreateToggle({
     Name="Remove Pandemonium", CurrentValue=false, Flag="RemovePandemonium",
     Callback=function(Value)
