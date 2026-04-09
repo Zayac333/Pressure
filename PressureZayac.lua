@@ -207,107 +207,116 @@ end
 -- ESP FUNCTIONS
 -- ================================================
 
+local Workspace = game:GetService("Workspace")
+local Rooms = Workspace:FindFirstChild("Rooms") or Workspace:FindFirstChild("CurrentRooms")
+local WHITE = Color3.new(1, 1, 1)
+
+-- [[ 1. СИСТЕМА ВІЗУАЛІЗАЦІЇ (ESP) ]] --
+
 local function AddESP(part, config)
     if not part or not part.Parent then return end
-    if part:FindFirstChildOfClass("Highlight") then return end
+    if part:FindFirstChild("ESP_Container") then return end 
 
+    local container = Instance.new("Folder")
+    container.Name = "ESP_Container"
+    container.Parent = part
+
+    -- Підсвітка (Highlight)
     local h = Instance.new("Highlight")
     h.Adornee = part
-    h.FillColor = config.fill
+    h.FillColor = config.fill or Color3.new(0, 1, 0)
     h.OutlineColor = config.outline or WHITE
     h.FillTransparency = config.fillTransparency or 0.4
     h.OutlineTransparency = 0
-    h.Parent = part
+    h.Parent = container
 
+    -- Текст (BillboardGui)
     local bb = Instance.new("BillboardGui")
     bb.Name = "ESP_Label"
     bb.Adornee = part
     bb.AlwaysOnTop = true
     bb.Size = UDim2.new(0, 140, 0, 40)
     bb.StudsOffset = Vector3.new(0, 3, 0)
-    bb.Parent = part
+    bb.Parent = container
 
     local lbl = Instance.new("TextLabel")
-    lbl.Text = config.label
+    lbl.Text = config.label or "Object"
     lbl.Size = UDim2.new(1, 0, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.TextColor3 = config.textColor or WHITE
-    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     lbl.TextStrokeTransparency = 0.3
     lbl.TextScaled = true
     lbl.Font = Enum.Font.GothamBold
     lbl.Parent = bb
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = config.outline or WHITE
-    stroke.Thickness = 1.5
-    stroke.Parent = lbl
+    -- Оптимізація: Автовидалення (наприклад, для дверей)
+    if config.autoDelete then
+        task.delay(30, function()
+            if container then container:Destroy() end
+        end)
+    end
 end
 
 local function RemoveESP(part)
     if not part then return end
-    local h = part:FindFirstChildOfClass("Highlight")
-    if h then h:Destroy() end
-    local b = part:FindFirstChild("ESP_Label")
-    if b then b:Destroy() end
+    local container = part:FindFirstChild("ESP_Container")
+    if container then container:Destroy() end
 end
 
-local function ScanRooms(enabled, matchFn, onFound)
-    local connections = {}
-    local scanned = {}
+-- [[ 2. УНІВЕРСАЛЬНИЙ СКАНЕР (Rooms & Workspace) ]] --
 
-    local function processDesc(d)
-        if scanned[d] then return end
-        scanned[d] = true
-        if not d.Parent then return end
+local function ScanObjects(enabledFn, matchFn, onFound)
+    local connections = {}
+    
+    local function process(d)
+        if not enabledFn() or not d.Parent then return end
         local config = matchFn(d.Name)
         if config then
-            local target = d:FindFirstChild("ProxyPart") or d
+            -- Знаходимо найкращу точку для кріплення ESP
+            local target = d:FindFirstChild("ProxyPart") or (d:IsA("Model") and d.PrimaryPart) or d
             onFound(target, config)
         end
     end
 
-    local function scanRoom(room)
-        for _, d in ipairs(room:GetDescendants()) do
-            if not enabled() then break end
-            processDesc(d)
+    -- Сканування кімнат (якщо вони є)
+    if Rooms then
+        for _, room in ipairs(Rooms:GetChildren()) do
+            for _, d in ipairs(room:GetDescendants()) do process(d) end
+            table.insert(connections, room.DescendantAdded:Connect(function(d)
+                task.wait(0.1)
+                process(d)
+            end))
         end
-    end
-
-    for _, room in ipairs(Rooms:GetChildren()) do
-        if not enabled() then break end
-        task.defer(function() scanRoom(room) end)
-        table.insert(connections, room.DescendantAdded:Connect(function(d)
-            task.wait(0.1)
-            if enabled() then processDesc(d) end
+        
+        table.insert(connections, Rooms.ChildAdded:Connect(function(room)
+            task.wait(0.5)
+            for _, d in ipairs(room:GetDescendants()) do process(d) end
+            table.insert(connections, room.DescendantAdded:Connect(function(d)
+                task.wait(0.1)
+                process(d)
+            end))
         end))
     end
-
-    table.insert(connections, Rooms.ChildAdded:Connect(function(room)
-        task.wait(0.3)
-        if not enabled() then return end
-        scanRoom(room)
-        table.insert(connections, room.DescendantAdded:Connect(function(d)
-            task.wait(0.1)
-            if enabled() then processDesc(d) end
-        end))
-    end))
 
     return connections
 end
 
-local function CreateESPToggle(tab, name, flag, matchFn)
+-- [[ 3. ФУНКЦІЇ ДЛЯ ТАБІВ (RAYFIELD) ]] --
+
+-- Створює перемикач для ESP будь-чого
+function CreateESPToggle(tab, name, flag, matchFn)
     local connections = {}
-    local active = false
     local targets = {}
+    local active = false
 
     tab:CreateToggle({
-        Name=name, CurrentValue=false, Flag=flag,
-        Callback=function(Value)
+        Name = name,
+        CurrentValue = false,
+        Flag = flag,
+        Callback = function(Value)
             active = Value
             if Value then
-                targets = {}
-                connections = ScanRooms(
+                connections = ScanObjects(
                     function() return active end,
                     matchFn,
                     function(target, config)
@@ -318,40 +327,34 @@ local function CreateESPToggle(tab, name, flag, matchFn)
             else
                 for _, c in ipairs(connections) do c:Disconnect() end
                 connections = {}
-                for _, target in ipairs(targets) do pcall(RemoveESP, target) end
+                for _, t in ipairs(targets) do pcall(RemoveESP, t) end
                 targets = {}
             end
         end
     })
 end
 
-local function CreateAntiToggle(tab, name, flag, matchFn)
-    local conns  = {}
+-- Створює перемикач для видалення будь-чого (Anti-Trap)
+function CreateAntiToggle(tab, name, flag, matchFn)
+    local conns = {}
     local active = false
 
     tab:CreateToggle({
-        Name=name, CurrentValue=false, Flag=flag,
-        Callback=function(Value)
+        Name = name,
+        CurrentValue = false,
+        Flag = flag,
+        Callback = function(Value)
             active = Value
             if Value then
-                local function destroyIfMatch(d)
-                    if not active then return end
-                    if matchFn(d.Name) then pcall(function() d:Destroy() end) end
+                local function clean(d)
+                    if active and matchFn(d.Name) then
+                        pcall(function() d:Destroy() end)
+                    end
                 end
-                local function setupRoom(room)
-                    task.defer(function()
-                        if not active then return end
-                        for _, d in ipairs(room:GetDescendants()) do destroyIfMatch(d) end
-                    end)
-                    table.insert(conns, room.DescendantAdded:Connect(function(d)
-                        task.wait(0.05)
-                        if active then destroyIfMatch(d) end
-                    end))
-                end
-                for _, room in ipairs(Rooms:GetChildren()) do setupRoom(room) end
-                table.insert(conns, Rooms.ChildAdded:Connect(function(room)
-                    task.wait(0.3)
-                    if active then setupRoom(room) end
+                for _, d in ipairs(workspace:GetDescendants()) do clean(d) end
+                table.insert(conns, workspace.DescendantAdded:Connect(function(d)
+                    task.wait(0.05)
+                    clean(d)
                 end))
             else
                 for _, c in ipairs(conns) do c:Disconnect() end
@@ -360,64 +363,14 @@ local function CreateAntiToggle(tab, name, flag, matchFn)
         end
     })
 end
+-- [[ ПРИКЛАД ВИКОРИСТАННЯ (ДОДАТИ В ТАБИ) ]] --
 
--- [[ НАЛАШТУВАННЯ ТА ОПТИМІЗАЦІЯ ]] --
-_G.DoorESP = true -- Змінна для керування роботою ESP [cite: 20]
-
-local function CreateSmartESP(obj, text, color, tag)
-    if not obj or obj:FindFirstChild(tag) then return end
-    
-    -- Перевірка наявності кнопки (фільтр фейків)
-    if obj.Name == "Door" and not obj:FindFirstChildOfClass("ProximityPrompt", true) then
-        return 
-    end
-
-    -- Визначаємо частину для кріплення ESP
-    local targetPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-    if not targetPart then return end
-
-    local folder = Instance.new("Folder", obj)
-    folder.Name = tag
-    
-    local h = Instance.new("Highlight", folder)
-    h.FillColor = color
-    h.Adornee = obj
-    
-    local bg = Instance.new("BillboardGui", folder)
-    bg.AlwaysOnTop = true
-    bg.Size = UDim2.new(0, 150, 0, 50)
-    bg.MaxDistance = 250
-    bg.Adornee = targetPart
-    
-    local lbl = Instance.new("TextLabel", bg)
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3 = color
-    lbl.Text = text
-    lbl.TextScaled = true
-    lbl.Font = Enum.Font.RobotoMono
-
-    -- Авто-видалення через 30 секунд [cite: 8, 9]
-    task.delay(30, function()
-        if folder then folder:Destroy() end
-    end)
-end
-
--- Безпечний цикл
-task.spawn(function()
-    while _G.DoorESP do
-        pcall(function()
-            -- Використовуємо GetChildren, якщо знаємо папку, або залишаємо Descendants з фільтром
-            for _, m in pairs(workspace:GetDescendants()) do
-                if (m.Name == "Door" or m.Name == "NormalDoor") and m:IsA("Model") then
-                    local roomName = (m.Parent and m.Parent.Name:match("%d+")) or "???"
-                    CreateSmartESP(m, "DOOR ["..roomName.."]", Color3.fromRGB(0, 255, 0), "ZayacVisual")
-                end
-            end
-        end)
-        task.wait(3) -- Збільшено інтервал для кращої продуктивності
-    end
-end)
+-- Для дверей:
+-- matchFn = function(name) 
+--    if name == "Door" then 
+--        return {label = "Door", fill = Color3.new(0,1,0), autoDelete = true} 
+--    end 
+-- end
 -- ================================================
 -- VISUALS TAB
 -- ================================================
