@@ -1,10 +1,10 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Pressure 0.5",
+    Name = "ZayacHub",
     Icon = 0,
-    LoadingTitle = "Pressure 0.5",
-    LoadingSubtitle = "by Normalplayer",
+    LoadingTitle = "Pressure|Script",
+    LoadingSubtitle = "by Zayac",
     Theme = {
         TextColor = Color3.fromRGB(200, 225, 255),
         Background = Color3.fromRGB(10, 18, 35),
@@ -45,9 +45,6 @@ local Window = Rayfield:CreateWindow({
     KeySystem = false
 })
 
--- ================================================
--- GARANTE QUE O PERSONAGEM ESTÁ LIMPO AO INICIAR
--- ================================================
 local function CleanupCharacter(char)
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -64,42 +61,13 @@ local Player      = Players.LocalPlayer
 local RunService  = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Movement variables
+
 local noclipActive = false
 local noclipLoop = nil
 
--- Limpa ao carregar e a cada respawn
+
 CleanupCharacter(Player.Character)
 Player.CharacterAdded:Connect(CleanupCharacter)
-
-task.wait(2)
-Rayfield:Notify({
-    Title = "Pressure 0.5",
-    Content = "Please report any bugs in the comments of ScriptBlox, or leave a suggestion!",
-    Duration = 8,
-    Image = "message-circle",
-})
-
-local Updates = Window:CreateTab("Updates", "file-text")
-Updates:CreateParagraph({
-    Title = "Version 0.3",
-    Content = "- Fixed Monster Dodge (now lifts 50 studs above)\n- Fixed Generator ESP\n- Fixed toggles not properly disabling\n- Added Anti-Statue\n- Improved performance\n- Added Changelog\n- Fixed Pandemonium notification spam"
-})
-Updates:CreateDivider()
-Updates:CreateParagraph({
-    Title = "Version 0.4",
-    Content = "- Monster Dodge now lifts 80 studs above\n- Monster Dodge timeout 40 seconds\n- Fixed Monster Dodge not stopping when toggle disabled\n- Added NeoStyk ESP\n- Added Anti WallDweller"
-})
-Updates:CreateDivider()
-Updates:CreateParagraph({
-    Title = "Version 0.45",
-    Content = "- Monster Dodge now lifts 160 studs above\n- Added Rare Currency ESP\n- Added Anti Pandemonium (all variants)\n- Added Anti Bouncer\n- Added Anti Skeleton Head\n- Added Noclip\n- Added Speed Changer"
-})
-Updates:CreateDivider()
-Updates:CreateParagraph({
-    Title = "Version 0.5",
-    Content = "- Monster Dodge now lifts 320 studs above\n- Fixed Loot Aura causing severe lag (now uses cached scan every 2s)\n- Added Auto Keypad Solve (reads password paper, auto presses buttons)\n- Added Loot Aura with cached scanning (no more frame drops)\n- Added FOV Changer (70-120 slider)\n- Added Auto Retry on death\n- Added Movement tab with Noclip toggle\n- Optimized ESP cleanup and Generator ESP tracking"
-})
 
 local Esp  = Window:CreateTab("Visuals", "eye")
 local Auto = Window:CreateTab("Automations", "zap")
@@ -544,7 +512,6 @@ Esp:CreateToggle({
     end
 })
 
--- Monster ESP — corrigido para Ridge variants e múltiplos containers
 local monsterEspConns, monsterEspActive = {}, false
 Esp:CreateToggle({
     Name="Monster ESP", CurrentValue=false, Flag="EspMonster",
@@ -571,7 +538,6 @@ Esp:CreateToggle({
             end))
         end
 
-        -- Escaneia workspace inteiro para pegar Ridge e outros que spawnam fora de Monsters
         local function scanWorkspace()
             for _, child in ipairs(workspace:GetChildren()) do
                 if MONSTERS[child.Name] then applyESP(child) end
@@ -586,7 +552,7 @@ Esp:CreateToggle({
 
         if Value then
             scanWorkspace()
-            -- Também escaneia GameplayFolder.Monsters
+                
             for _, child in ipairs(workspace.GameplayFolder.Monsters:GetChildren()) do
                 if MONSTERS[child.Name] then applyESP(child) end
             end
@@ -606,7 +572,6 @@ Esp:CreateToggle({
     end
 })
 
--- Monster Alert — corrigido para Ridge variants
 local monsterAlertConns, monsterAlertActive = {}, false
 Esp:CreateToggle({
     Name="Monster Alert", CurrentValue=false, Flag="MonsterAlert",
@@ -844,7 +809,7 @@ Auto:CreateToggle({
 -- ================================================
 
 local lootAuraActive = false
-local lootAuraRadius = 15
+local lootAuraRadius = 10
 local lootAuraLoop = nil
 local lootAuraCache = {}
 local lootAuraLastScan = 0
@@ -881,7 +846,7 @@ local function CollectNearbyItems()
     local root = GetRootPart()
     if not root then return end
 
-    -- Rebuild cache every 2 seconds only instead of scanning every frame
+
     local now = tick()
     if now - lootAuraLastScan > 2 then
         BuildLootCache()
@@ -1039,7 +1004,6 @@ local function SolveKeypad(keypad)
             local dir = (targetPos - root.Position).Unit
             local approachPos = targetPos - (dir * 4)
 
-            -- Teleport within 7 stud validation range
             root.CFrame = CFrame.new(approachPos + Vector3.new(0, 3, 0))
             task.wait(0.2)
 
@@ -1255,42 +1219,30 @@ Move:CreateToggle({
 Anti:CreateSection("Monsters")
 
 Anti:CreateToggle({
-    Name="Remove Eyefestation", CurrentValue=false, Flag="RemoveEyefestation",
-    Callback=function(Value)
-        local conn=nil; local muteConn=nil
-        local function muteSong(mute)
+     Name = "Anti-Shark Protection",
+     CurrentValue = false,
+     Callback = function(Value)
+       _G.AntiShark = Value
+       task.spawn(function()
+         while _G.AntiShark do
             pcall(function()
-                local song = Player.PlayerGui.Main.Client.MainClient.LocalEntities.Eyefestation.Song
-                song.Volume = mute and 0 or 1
-                if mute and not muteConn then
-                    muteConn = song:GetPropertyChangedSignal("Volume"):Connect(function()
-                        if song.Volume > 0 then song.Volume = 0 end
-                    end)
-                end
+               for _, v in pairs(workspace.CurrentCamera:GetChildren()) do
+                  if v.Name:find("Eye") or v.Name:find("Gaze") or v.Name == "Static" then
+                     v:Destroy()
+                  end
+               end
+               local pg = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+               if pg and pg:FindFirstChild("MainGui") then
+                  local static = pg.MainGui:FindFirstChild("Static", true)
+                  if static then static.Visible = false end
+               end
             end)
-        end
-        if Value then
-            local function removeInRoom(room)
-                for _, d in ipairs(room:GetDescendants()) do
-                    if d.Name=="EyefestationSpawn" then pcall(function() d:Destroy() end) end
-                end
-            end
-            for _, room in ipairs(Rooms:GetChildren()) do task.defer(function() removeInRoom(room) end) end
-            conn = Rooms.ChildAdded:Connect(function(room)
-                task.wait(0.1); removeInRoom(room)
-                room.DescendantAdded:Connect(function(d)
-                    if d.Name=="EyefestationSpawn" then pcall(function() d:Destroy() end) end
-                end)
-            end)
-            muteSong(true)
-        else
-            if conn then conn:Disconnect(); conn=nil end
-            if muteConn then muteConn:Disconnect(); muteConn=nil end
-            muteSong(false)
-        end
-    end
+            task.wait(0.2)
+         end
+      end)
+   end,
 })
-
+      
 Anti:CreateToggle({
     Name="Remove Pandemonium", CurrentValue=false, Flag="RemovePandemonium",
     Callback=function(Value)
