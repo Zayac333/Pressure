@@ -361,6 +361,85 @@ local function CreateAntiToggle(tab, name, flag, matchFn)
     })
 end
 
+-- [[ НАЛАШТУВАННЯ ТА ОПТИМІЗАЦІЯ ]] --
+_G.DoorESP = true -- Змінна для керування роботою ESP [cite: 20]
+
+local function CreateSmartESP(obj, text, color, tag)
+    -- Перевірка, щоб не створювати дублікати 
+    if obj:FindFirstChild(tag) then return end
+    
+    -- Фільтр фейкових дверей: пропускаємо двері без кнопок взаємодії 
+    if obj.Name == "Door" and not obj:FindFirstChildOfClass("ProximityPrompt", true) then
+        return 
+    end
+
+    -- Створення контейнера для візуальних елементів 
+    local folder = Instance.new("Folder", obj)
+    folder.Name = tag
+    
+    -- 1. Підсвітка (Highlight) 
+    local h = Instance.new("Highlight", folder)
+    h.FillColor = color
+    h.OutlineColor = Color3.new(1, 1, 1)
+    h.FillTransparency = 0.4
+    h.Adornee = obj
+    
+    -- 2. Текст із номером або назвою (BillboardGui) [cite: 16]
+    local bg = Instance.new("BillboardGui", folder)
+    bg.AlwaysOnTop = true
+    bg.Size = UDim2.new(0, 150, 0, 50)
+    bg.MaxDistance = 250
+    bg.Adornee = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+    
+    local lbl = Instance.new("TextLabel", bg)
+    lbl.Size = UDim2.new(1, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = color
+    lbl.TextStrokeTransparency = 0
+    lbl.Text = text
+    lbl.TextScaled = true
+    lbl.Font = Enum.Font.RobotoMono
+
+    -- [[ ЛОГІКА АВТО-ВИДАЛЕННЯ ЧЕРЕЗ 30 СЕКУНД ]] --
+    -- Це запобігає навантаженню на систему від старих дверей 
+    if tag == "ZayacVisual" then 
+        task.delay(30, function()
+            if folder then 
+                folder:Destroy() 
+            end
+        end)
+    end
+end
+
+-- [[ ЦИКЛ ПОШУКУ ДВЕРЕЙ У ВОРКСПЕЙСІ ]] --
+task.spawn(function()
+    while _G.DoorESP do
+        pcall(function()
+            for _, m in pairs(workspace:GetDescendants()) do
+                -- Шукаємо об'єкти з назвою Door або NormalDoor [cite: 21]
+                if (m.Name == "Door" or m.Name == "NormalDoor") and m:IsA("Model") then
+                    
+                    -- Спроба знайти номер кімнати в назві батьківського об'єкта або на табличці [cite: 21, 22]
+                    local roomNum = m.Parent.Name:match("%d+") 
+                    
+                    if not roomNum then
+                        local sign = m:FindFirstChild("Sign", true)
+                        local txt = sign and sign:FindFirstChildOfClass("TextLabel", true)
+                        if txt and txt.Text:match("%d+") then
+                            roomNum = txt.Text:match("%d+") -- [cite: 23]
+                        end
+                    end
+                    
+                    if not roomNum then roomNum = "Door" end -- [cite: 24]
+
+                    -- Виклик функції створення ESP [cite: 25]
+                    CreateSmartESP(m, "DOOR ["..roomNum.."]", Color3.fromRGB(0, 255, 0), "ZayacVisual")
+                end
+            end
+        end)
+        task.wait(2) -- Оптимізована пауза між скануваннями [cite: 25]
+    end
+end)
 -- ================================================
 -- VISUALS TAB
 -- ================================================
