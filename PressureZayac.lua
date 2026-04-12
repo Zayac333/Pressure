@@ -1251,47 +1251,78 @@ Move:CreateToggle({
 })
 
 local speedActive = false
-local speedValue = 22
+local speedValue = 63 
 local speedLoop = nil
 local speedKey = Enum.KeyCode.V
 
 Move:CreateSection("Movement")
 
-local SpeedToggle = Move:CreateToggle({
-    Name = "Speed Hack (Key: V)",
-    CurrentValue = false,
-    Flag = "SpeedHack",
-    Callback = function(Value)
-        speedActive = Value
-        if Value then
-            if not speedLoop then
-                speedLoop = RunService.Heartbeat:Connect(function()
-                    if not speedActive then return end
-                    local char = Player.Character
-                    local root = char and char:FindFirstChild("HumanoidRootPart")
-                    local hum = char and char:FindFirstChildOfClass("Humanoid")
-                    
-                    if root and hum and hum.MoveDirection.Magnitude > 0 then
-                        -- Метод через CFrame: він буквально "штовхає" тебе вперед
-                        char:TranslateBy(hum.MoveDirection * (speedValue / 100))
-                    end
-                end)
-            end
-        else
-            if speedLoop then
-                speedLoop:Disconnect()
-                speedLoop = nil
-            end
-        end
-    end
+local SpeedTgl = Move:CreateToggle({
+   Name = "Speed Hack (V)",
+   CurrentValue = false,
+   Flag = "SpeedHack",
+   Callback = function(Value)
+       speedActive = Value
+       if Value then
+           if not speedLoop then
+               -- Використовуємо Stepped, як в оригіналі Zayac.txt 
+               speedLoop = game:GetService("RunService").Stepped:Connect(function()
+                   if not speedActive then return end
+                   
+                   local char = Player.Character
+                   local root = char and char:FindFirstChild("HumanoidRootPart")
+                   local hum = char and char:FindFirstChild("Humanoid")
+
+                   if hum and root then
+                       -- Подвійна логіка: WalkSpeed + CFrame 
+                       hum.WalkSpeed = speedValue
+                       
+                       if hum.MoveDirection.Magnitude > 0 then
+                           -- Та сама формула з магічним числом 110 
+                           root.CFrame = root.CFrame + (hum.MoveDirection * (speedValue / 110))
+                       end
+                       
+                       -- Постійне вимкнення падіння в кожному кадрі 
+                       hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                       hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                   end
+               end)
+           end
+       else
+           if speedLoop then
+               speedLoop:Disconnect()
+               speedLoop = nil
+           end
+           
+           -- Повернення до стандартних налаштувань
+           local char = Player.Character
+           local hum = char and char:FindFirstChildOfClass("Humanoid")
+           if hum then
+               hum.WalkSpeed = 16
+               hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+               hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+           end
+       end
+   end,
 })
 
--- Обробка клавіші V (залишаємо як було)
+Move:CreateSlider({
+   Name = "Speed Value",
+   Range = {16, 300},
+   Increment = 1,
+   CurrentValue = 63, -- Стандартне значення з твого файлу [cite: 3]
+   Flag = "SpeedSlider", 
+   Callback = function(Value)
+      speedValue = Value
+   end,
+})
+
+-- Обробка клавіші V для синхронізації з Rayfield [cite: 16]
 game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == speedKey then
         speedActive = not speedActive
-        SpeedToggle:Set(speedActive)
+        SpeedTgl:Set(speedActive)
     end
 end)
 
