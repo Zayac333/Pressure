@@ -13,7 +13,7 @@ local lib = getGlobalTable()._FIRELIB
 local plr = game:GetService("Players").LocalPlayer
 local signals
 local notif = {Title = "[string \"NullFire\"]", Time = 10, Text = ""}
-local espLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/MyRobloxScripts/main/Librare2.lua", true))()
+local espLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/Librare2.lua", true))()
 
 pcall(function()
 	signals = loadstring(game:HttpGet(""))()
