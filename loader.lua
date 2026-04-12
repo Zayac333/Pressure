@@ -33,10 +33,10 @@ end
 getGlobalTable().GameName = "true"
 getGlobalTable().FireHubLoaded = true
 
-local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/MyRobloxScripts/main/Menu.lua", true))()
-local espLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/MyRobloxScripts/main/Librare2.lua", true))()
-local txtf = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/MyRobloxScripts/main/SideText.lua", true))()
-local network = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/MyRobloxScripts/main/Librare.lua", true))()
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/Menu.lua", true))()
+local espLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/Librare2.lua", true))()
+local txtf = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/SideText.lua", true))()
+local network = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/Librare.lua", true))()
 
 local fireproximityprompt = function(...)
 	return network.Other:FireProximityPrompt(...)
