@@ -461,6 +461,84 @@ Esp:CreateToggle({
     end
 })
 
+local doorConns, doorActive = {}, false
+
+Esp:CreateToggle({
+    Name = "Real Door ESP", 
+    CurrentValue = false, 
+    Flag = "EspRealDoor",
+    Callback = function(Value)
+        doorActive = Value
+        -- Синій колір для справжніх дверей
+        local cfg = { 
+            fill = Color3.fromRGB(0, 170, 255), 
+            outline = Color3.new(1, 1, 1), 
+            textColor = Color3.fromRGB(0, 255, 140), 
+            fillTransparency = 0.4 
+        }
+        
+        if Value then
+            doorConns = ScanRooms(
+                function() return doorActive end,
+                function(n) return n == "Door" and cfg or nil end,
+                function(target, config)
+                    -- Перевіряємо, що це НЕ фальшива двері (Trickster)
+                    if target.Parent and target.Parent.Name ~= "TricksterDoor" then
+                        local doorModel = target.Parent
+                        local doorNumber = "???"
+
+                        -- ЛОГІКА ПОШУКУ НОМЕРА (Pressure Special)
+                        -- 1. Шукаємо через папку Entrances (як ти вказав)
+                        local entrance = doorModel:FindFirstChild("Entrances") or doorModel.Parent:FindFirstChild("Entrances")
+                        if entrance then
+                            -- Зазвичай номер - це ім'я першого об'єкта в Entrances
+                            local eChild = entrance:GetChildren()[1]
+                            if eChild then
+                                doorNumber = eChild.Name:match("%d+") or eChild.Name
+                            end
+                        end
+
+                        -- 2. Якщо в Entrances порожньо, шукаємо в атрибутах
+                        if doorNumber == "???" then
+                            local index = doorModel:GetAttribute("DoorIndex") or 
+                                          doorModel:GetAttribute("RoomIndex") or 
+                                          doorModel.Parent:GetAttribute("RoomIndex")
+                            if index then doorNumber = tostring(index) end
+                        end
+
+                        -- 3. Остання спроба: номер у назві самої кімнати
+                        if doorNumber == "???" then
+                            local roomName = doorModel.Parent and doorModel.Parent.Name
+                            doorNumber = roomName:match("%d+") or roomName or "Door"
+                        end
+                        
+                        -- Створюємо унікальну підсвітку з номером
+                        local customConfig = table.clone(config)
+                        customConfig.label = "DOOR [" .. doorNumber .. "]"
+                        
+                        AddESP(target, customConfig)
+                    end
+                end
+            )
+        else
+            -- Очищення
+            if doorConns then
+                for _, c in ipairs(doorConns) do c:Disconnect() end
+                doorConns = {}
+            end
+            
+            -- Видалення ESP з усіх дверей
+            for _, room in ipairs(workspace.Rooms:GetChildren()) do
+                for _, d in ipairs(room:GetDescendants()) do
+                    if d.Name == "Door" then
+                        pcall(RemoveESP, d)
+                    end
+                end
+            end
+        end
+    end
+})
+
 local generatorConns, generatorActive = {}, false
 Esp:CreateToggle({
     Name="Generator ESP", CurrentValue=false, Flag="EspGenerator",
@@ -634,43 +712,55 @@ Esp:CreateToggle({
 
 Esp:CreateSection("World")
 
-local originalLighting, fullbrightEffects = {}, {}
+local Lighting = game:GetService("Lighting")
+local fbEnabled = false
+
+-- Зберігаємо стандартні налаштування гри при запуску скрипту
+local defaultSettings = {
+    Ambient = Lighting.Ambient,
+    Brightness = Lighting.Brightness,
+    FogEnd = Lighting.FogEnd,
+    GlobalShadows = Lighting.GlobalShadows,
+    OutdoorAmbient = Lighting.OutdoorAmbient
+}
+
 Esp:CreateToggle({
-    Name="Fullbright", CurrentValue=false, Flag="Fullbright",
-    Callback=function(Value)
-        local L = game:GetService("Lighting")
-        if Value then
-            originalLighting = {
-                Brightness=L.Brightness, ClockTime=L.ClockTime,
-                FogEnd=L.FogEnd, GlobalShadows=L.GlobalShadows,
-                Ambient=L.Ambient, OutdoorAmbient=L.OutdoorAmbient,
-            }
-            fullbrightEffects = {}
-            for _, e in ipairs(L:GetChildren()) do
-                if e:IsA("BlurEffect") or e:IsA("ColorCorrectionEffect")
-                or e:IsA("DepthOfFieldEffect") or e:IsA("SunRaysEffect") then
-                    fullbrightEffects[e] = e.Enabled
-                    e.Enabled = false
-                end
-            end
-            L.Brightness=10; L.ClockTime=14; L.FogEnd=100000
-            L.GlobalShadows=false
-            L.Ambient=Color3.fromRGB(255,255,255)
-            L.OutdoorAmbient=Color3.fromRGB(255,255,255)
+    Name = "Fullbright",
+    CurrentValue = false,
+    Flag = "Fullbright",
+    Callback = function(Value)
+        fbEnabled = Value
+        
+        if fbEnabled then
+            -- Одноразове налаштування при ввімкненні
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.Brightness = 2
+            Lighting.FogEnd = 100000
+            Lighting.GlobalShadows = false
+            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
         else
-            L.Brightness=originalLighting.Brightness
-            L.ClockTime=originalLighting.ClockTime
-            L.FogEnd=originalLighting.FogEnd
-            L.GlobalShadows=originalLighting.GlobalShadows
-            L.Ambient=originalLighting.Ambient
-            L.OutdoorAmbient=originalLighting.OutdoorAmbient
-            for effect, wasEnabled in pairs(fullbrightEffects) do
-                if effect and effect.Parent then effect.Enabled = wasEnabled end
-            end
-            fullbrightEffects = {}
+            -- Повертаємо оригінальне освітлення
+            Lighting.Ambient = defaultSettings.Ambient
+            Lighting.Brightness = defaultSettings.Brightness
+            Lighting.FogEnd = defaultSettings.FogEnd
+            Lighting.GlobalShadows = defaultSettings.GlobalShadows
+            Lighting.OutdoorAmbient = defaultSettings.OutdoorAmbient
         end
     end
 })
+
+-- Постійна підтримка світла через RenderStepped (щоб гра не скидала налаштування)
+game:GetService("RunService").RenderStepped:Connect(function()
+    if fbEnabled then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.FogEnd = 100000
+        -- Додаємо вимкнення тіней тут теж, якщо гра їх повертає
+        if Lighting.GlobalShadows ~= false then
+            Lighting.GlobalShadows = false
+        end
+    end
+end)
 
 Esp:CreateSection("Camera")
 
