@@ -60,6 +60,167 @@ local network = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac
 local fireproximityprompt = function(...)
     return network.Other:FireProximityPrompt(...)
 end
+
+-- ========== GLOBALS FOR INTERACT ==========
+local rs = game:GetService("RunService")
+local plr = game:GetService("Players").LocalPlayer
+
+local cons = {}                -- зберігаємо коннекшени
+local doors = {}               -- промпти дверей
+local money = {}               -- промпти валюти (ProximityPrompt)
+local monsters = {}            -- трекінг монстрів
+local doorCodes = {}           -- RemoteFunction door codes
+local lockers = {}             -- шафки
+local searchlights = {}        -- searchlight remoteevents
+local originalDistances = {}   -- збережені MaxActivationDistance
+
+-- ======= SIMPLE, RELIABLE INTERACT SYSTEM =======
+-- Вставити після оголошення fireproximityprompt і глобалів (rs, plr, cons, doors, money, monsters)
+
+-- Універсальна функція, що обробляє нові об'єкти
+local function handleDescendant(obj)
+    if not obj or not obj.Parent then return end
+
+    -- Промпти
+    if obj:IsA("ProximityPrompt") then
+        -- зберігаємо оригінальну дистанцію
+        originalDistances[obj] = obj.MaxActivationDistance
+        obj.MaxActivationDistance = obj.MaxActivationDistance * ((vals.ExtraPrompt or 0) / 100 + 1)
+
+        -- якщо дверний промпт (Root -> Model)
+        if obj.Parent.Name == "Root" and obj.Parent.Parent and obj.Parent.Parent:IsA("Model") then
+            table.insert(doors, obj)
+            return
+        end
+
+        -- шукаємо Amount по всіх батьках (універсально)
+        local parent = obj.Parent
+        local foundAmount = nil
+        while parent do
+            if parent.GetAttribute then
+                local a = parent:GetAttribute("Amount")
+                if a ~= nil then
+                    foundAmount = a
+                    break
+                end
+            end
+            parent = parent.Parent
+        end
+
+        if foundAmount ~= nil then
+            table.insert(money, obj)
+            -- тимчасовий лог для діагностики (видалити після тесту)
+            print("[INTERACT] Currency prompt added:", obj:GetFullName(), "Amount=", foundAmount)
+        else
+            -- предмет/інший промпт — робимо ESP як у скрипті
+            local espTarget = obj.Parent
+            if espTarget and espTarget.Parent and espTarget.Parent:IsA("Model") then
+                espTarget = espTarget.Parent
+            end
+            pcall(esp, espTarget, {HighlightEnabled = false, Color = getColor(espTarget), Text = getText(espTarget), ESPName = "ItemESP"})
+        end
+
+        return
+    end
+
+    -- Звуки на частинах — монстри
+    if obj:IsA("Sound") and obj.Parent and obj.Parent:IsA("BasePart") then
+        local name = obj.Parent.Name:lower()
+        if not (name:find("ambience") or name:find("orb") or name:find("vent") or name:find("proxy")) then
+            if obj.Parent.Parent == workspace or obj.Parent.Parent == workspace.GameplayFolder.Monsters then
+                onMonster(obj.Parent)
+            end
+        end
+        return
+    end
+
+    -- Моделі: двері, монстри
+    if obj:IsA("Model") then
+        if obj.Parent and obj.Parent.Name == "Entrances" then
+            esp(obj:WaitForChild("Door", 2.5) or obj, { HighlightEnabled = true, Color = obj:FindFirstChild("Lock", math.huge) and Color3.fromRGB(100, 175, 255) or Color3.fromRGB(0, 255, 100), Text = "Room " .. ( (game:GetService("ReplicatedStorage").Events.CurrentRoomNumber:InvokeServer() or 0) + 1 ) .. (obj:FindFirstChild("Lock", math.huge) and "\n[ Locked ]" or ""), ESPName = "DoorESP" })
+        elseif obj.Parent == workspace.GameplayFolder.Monsters or obj.Name == "Eyefestation" then
+            onMonster(obj)
+        end
+        return
+    end
+
+    -- RemoteEvent searchlights
+    if obj:IsA("RemoteEvent") and obj.Parent and obj.Parent:IsA("Part") and obj.Name == "RemoteEvent" and obj.Parent.Name:lower():match("searchlight") then
+        task.spawn(blockInstance, obj, "AntiSearchlights")
+        table.insert(searchlights, obj)
+        return
+    end
+
+    -- RemoteFunction door codes / lockers
+    if obj:IsA("RemoteFunction") then
+        if obj.Parent and obj.Parent.Name == "Main" and obj.Name == "RemoteFunction" and obj.Parent.Parent and obj.Parent.Parent:FindFirstChild("Keypad0") then
+            table.insert(doorCodes, obj)
+        end
+        if obj.Name == "Enter" and obj.Parent and obj.Parent:IsA("Folder") and obj.Parent.Parent and obj.Parent.Parent.Name == "Locker" then
+            table.insert(lockers, obj.Parent.Parent)
+        end
+    end
+end
+
+-- Первинне сканування
+for _, v in ipairs(workspace:GetDescendants()) do
+    task.spawn(handleDescendant, v)
+end
+
+-- Слухаємо нові об'єкти
+cons[#cons + 1] = workspace.DescendantAdded:Connect(function(obj)
+    -- невелика затримка, щоб об'єкт встиг ініціалізуватись
+    task.wait(0.05)
+    pcall(handleDescendant, obj)
+end)
+
+-- InstantInteract (PromptButtonHoldBegan)
+cons[#cons + 1] = game:GetService("ProximityPromptService").PromptButtonHoldBegan:Connect(function(prompt)
+    if vals.InstantInteract then
+        pcall(function()
+            prompt:InputHoldEnd()
+            task.wait()
+            fireproximityprompt(prompt)
+        end)
+    end
+end)
+
+-- Надійний RenderStepped (ітеруємо з кінця до початку)
+cons[#cons + 1] = rs.RenderStepped:Connect(function(dt)
+    -- BetterDoors
+    if vals.BetterDoors then
+        for i = #doors, 1, -1 do
+            local doorPrompt = doors[i]
+            if doorPrompt and doorPrompt.Parent then
+                pcall(fireproximityprompt, doorPrompt, false)
+            else
+                table.remove(doors, i)
+            end
+        end
+    end
+
+    -- AutoGrabCurrency
+    if vals.AutoGrabCurrency then
+        for i = #money, 1, -1 do
+            local prompt = money[i]
+            if prompt and prompt.Parent then
+                pcall(fireproximityprompt, prompt, false)
+            else
+                table.remove(money, i)
+            end
+        end
+    end
+
+    -- Очищення монстрів
+    for i = #monsters, 1, -1 do
+        local m = monsters[i]
+        if not m or not m.Parent then
+            table.remove(monsters, i)
+        end
+    end
+end)
+-- ======= END INTERACT SYSTEM =======
+
 -- ================================
 -- СТВОРЕННЯ ВІКНА
 -- ================================
@@ -671,44 +832,110 @@ end})
 
 local pageBypass = window:AddPage({Title = "Bypasses"})
 
--- Універсальний хелпер для видалення сутностей
-local function setupRemoval(nameTable, valKey, connsVar)
-    if vals[valKey] then
-        -- первинне очищення
-        for _, child in ipairs(workspace:GetDescendants()) do
-            if nameTable[child.Name] then pcall(function() child:Destroy() end) end
-        end
+-- ===== Bypass throttling core =====
+local bypassQueue = {}
+local bypassConns = {}
+local BYPASS_BATCH_SIZE = 12
+local BYPASS_BATCH_INTERVAL = 0.12 -- обробка ~8 разів/сек
+local BYPASS_ROOM_WAIT = 0.06 -- пауза між кімнатами при первинному скануванні
+local bypassDebounce = {}
 
-        -- функція перевірки
-        local function checkChild(child)
-            if vals[valKey] and nameTable[child.Name] then
-                pcall(function() child:Destroy() end)
+local function enqueueForBypass(obj)
+    if not obj or not obj.Parent then return end
+    bypassQueue[#bypassQueue + 1] = obj
+end
+
+local function processBypassQueueStep()
+    local removed = 0
+    for i = #bypassQueue, 1, -1 do
+        if removed >= BYPASS_BATCH_SIZE then break end
+        local obj = bypassQueue[i]
+        if obj and obj.Parent then
+            pcall(function() obj:Destroy() end)
+        end
+        table.remove(bypassQueue, i)
+        removed = removed + 1
+    end
+end
+
+-- Heartbeat processor (додаємо в cons)
+do
+    local tickAccum = 0
+    cons[#cons + 1] = rs.Heartbeat:Connect(function(dt)
+        tickAccum = tickAccum + dt
+        if tickAccum >= BYPASS_BATCH_INTERVAL then
+            tickAccum = 0
+            if #bypassQueue > 0 then
+                processBypassQueueStep()
             end
         end
+    end)
+end
 
-        -- коннекти
-        _G[connsVar] = {}
-        table.insert(_G[connsVar], workspace.DescendantAdded:Connect(checkChild))
-        table.insert(_G[connsVar], workspace.ChildAdded:Connect(checkChild))
-        table.insert(_G[connsVar], workspace.GameplayFolder.Monsters.DescendantAdded:Connect(checkChild))
-        table.insert(_G[connsVar], workspace.GameplayFolder.Monsters.ChildAdded:Connect(checkChild))
-        table.insert(_G[connsVar], workspace.GameplayFolder.Rooms.DescendantAdded:Connect(checkChild))
-        table.insert(_G[connsVar], workspace.GameplayFolder.Rooms.ChildAdded:Connect(checkChild))
-
-        -- періодична перевірка
-        task.spawn(function()
-            while vals[valKey] do
-                for _, child in ipairs(workspace:GetDescendants()) do
-                    checkChild(child)
+-- Throttled room scanner: додає підходящі об'єкти в чергу
+local function scanRoomsThrottled(matchFn)
+    task.spawn(function()
+        for _, room in ipairs(workspace.GameplayFolder.Rooms:GetChildren()) do
+            for _, d in ipairs(room:GetDescendants()) do
+                if matchFn(d) then
+                    enqueueForBypass(d)
                 end
-                task.wait(1)
             end
+            task.wait(BYPASS_ROOM_WAIT)
+        end
+    end)
+end
+
+-- Новий setupRemoval: не видаляє миттєво, а ставить в чергу і підписується
+local function setupRemoval(nameTable, valKey, connsVar)
+    -- debounce key для кожного valKey
+    if bypassDebounce[valKey] then return end
+    bypassDebounce[valKey] = true
+
+    if vals[valKey] then
+        -- первинне сканування по кімнатах (throttled)
+        scanRoomsThrottled(function(d)
+            return nameTable[d.Name] == true
         end)
+
+        -- підписки: додаємо в чергу при появі нових об'єктів
+        _G[connsVar] = _G[connsVar] or {}
+        local function onDesc(d)
+            if not vals[valKey] then return end
+            if nameTable[d.Name] then
+                enqueueForBypass(d)
+            end
+        end
+
+        table.insert(_G[connsVar], workspace.GameplayFolder.Rooms.DescendantAdded:Connect(onDesc))
+        table.insert(_G[connsVar], workspace.GameplayFolder.Rooms.ChildAdded:Connect(function(room)
+            task.wait(0.05)
+            if not vals[valKey] then return end
+            -- скануємо нову кімнату швидко
+            for _, d in ipairs(room:GetDescendants()) do
+                if nameTable[d.Name] then enqueueForBypass(d) end
+            end
+            -- підписуємося на майбутні десценданти
+            table.insert(_G[connsVar], room.DescendantAdded:Connect(onDesc))
+        end))
+
+        -- додаткові контейнерні підписки (Monsters, workspace)
+        table.insert(_G[connsVar], workspace.DescendantAdded:Connect(onDesc))
+        table.insert(_G[connsVar], workspace.ChildAdded:Connect(onDesc))
+        table.insert(_G[connsVar], workspace.GameplayFolder.Monsters.DescendantAdded:Connect(onDesc))
+        table.insert(_G[connsVar], workspace.GameplayFolder.Monsters.ChildAdded:Connect(onDesc))
+
+        -- завершення debounce через короткий час
+        task.delay(0.2, function() bypassDebounce[valKey] = nil end)
     else
+        -- вимкнення: відключаємо всі коннекшени, черга буде поступово оброблена
         if _G[connsVar] then
-            for _, c in ipairs(_G[connsVar]) do c:Disconnect() end
+            for _, c in ipairs(_G[connsVar]) do
+                pcall(function() c:Disconnect() end)
+            end
         end
         _G[connsVar] = {}
+        bypassDebounce[valKey] = nil
     end
 end
 
@@ -959,28 +1186,39 @@ end})
 cons[#cons + 1] = rs.RenderStepped:Connect(function(dt)
     -- Better doors
     if vals.BetterDoors then
-        for idx, doorPrompt in doors do
+        for i = #doors, 1, -1 do
+            local doorPrompt = doors[i]
             if doorPrompt and doorPrompt.Parent then
                 fireproximityprompt(doorPrompt, false)
             else
-                table.remove(doors, idx)
-                break
+                table.remove(doors, i)
             end
         end
     end
 
-    -- Auto loot currency
+    -- Автолут валют
     if vals.AutoGrabCurrency then
-        for i, v in money do
-            if not v or not v.Parent then
-                table.remove(money, i)
-                break
+        for i = #money, 1, -1 do
+            local prompt = money[i]
+            if prompt and prompt.Parent then
+                fireproximityprompt(prompt, false)
             else
-                fireproximityprompt(v, false)
+                table.remove(money, i)
             end
         end
     end
+
+    -- Очищення монстрів
+    for i = #monsters, 1, -1 do
+        local m = monsters[i]
+        if not m or not m.Parent then
+            table.remove(monsters, i)
+        end
+    end
+
+    -- (за потреби додай інші періодичні перевірки тут)
 end)
+
 
 -- ================================
 -- ЗАВЕРШЕННЯ СКРИПТА
