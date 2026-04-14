@@ -238,11 +238,6 @@ local window = lib:MakeWindow({
     end
 }, true)
 
--- Перша сторінка
-local page = window:AddPage({Title = "! READ ME NOW !"})
-page:AddLabel({Caption = "Because pressure has been updated, ZayacHub got patched"})
-page:AddLabel({Caption = "At this moment script being fully rewrited"})
-page:AddLabel({Caption = "Expect more features to be added"})
 -- ================================
 -- СПИСКИ МОНСТРІВ (з Pressure1)
 -- ================================
@@ -1183,42 +1178,53 @@ end})
 -- ЛОГІКА АВТОЛУТУ (RenderStepped)
 -- ================================
 
-cons[#cons + 1] = rs.RenderStepped:Connect(function(dt)
-    -- Better doors
-    if vals.BetterDoors then
-        for i = #doors, 1, -1 do
-            local doorPrompt = doors[i]
-            if doorPrompt and doorPrompt.Parent then
-                fireproximityprompt(doorPrompt, false)
-            else
-                table.remove(doors, i)
-            end
-        end
-    end
+-- Автолут і BetterDoors з batch-обробкою
+local batchSize = 20   -- скільки промптів обробляти за цикл
+local tickAccum = 0
 
-    -- Автолут валют
+cons[#cons + 1] = rs.Heartbeat:Connect(function(dt)
+    tickAccum = tickAccum + dt
+    if tickAccum < 0.12 then return end -- ~8 разів/сек
+    tickAccum = 0
+
+    -- AutoGrabCurrency
     if vals.AutoGrabCurrency then
-        for i = #money, 1, -1 do
-            local prompt = money[i]
-            if prompt and prompt.Parent then
-                fireproximityprompt(prompt, false)
-            else
-                table.remove(money, i)
+        local count = #money
+        if count > 0 then
+            for i = count, math.max(count - batchSize + 1, 1), -1 do
+                local prompt = money[i]
+                if prompt and prompt.Parent then
+                    pcall(fireproximityprompt, prompt, false)
+                else
+                    table.remove(money, i)
+                end
             end
         end
     end
 
-    -- Очищення монстрів
+    -- BetterDoors
+    if vals.BetterDoors then
+        local count = #doors
+        if count > 0 then
+            for i = count, math.max(count - batchSize + 1, 1), -1 do
+                local doorPrompt = doors[i]
+                if doorPrompt and doorPrompt.Parent then
+                    pcall(fireproximityprompt, doorPrompt, false)
+                else
+                    table.remove(doors, i)
+                end
+            end
+        end
+    end
+
+     -- Очищення монстрів
     for i = #monsters, 1, -1 do
         local m = monsters[i]
         if not m or not m.Parent then
             table.remove(monsters, i)
         end
     end
-
-    -- (за потреби додай інші періодичні перевірки тут)
 end)
-
 
 -- ================================
 -- ЗАВЕРШЕННЯ СКРИПТА
