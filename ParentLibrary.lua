@@ -4327,7 +4327,7 @@ local lib; lib = {
                     end,
                     AddInput = function(self, options)
                         options = getOptions(options)
-                        options.Default = typeof(options.Default) == "string" and options.Default or typeof(options.Base) == "string" and options.Base or "LeftAlt"
+                        options.Default = typeof(options.Default) == "string" and options.Default or typeof(options.Base) == "string" and options.Base or "R"
                         local funcs = {}
                         local text = getText(options) or "Input"
                         local counterText = count(text, 2)
@@ -4857,7 +4857,7 @@ local lib; lib = {
         window.HolderFrame.PageDisplay.Visible = true
 
         local page = windowFuncs:AddPage({Title = "Main", Order = 999})
-        local toggleKey = Enum.KeyCode.LeftAlt
+        local toggleKey = Enum.KeyCode.R
         page:AddButton({Text = "Hide UI", Callback = function()
             if windowFuncs:Minimize() then
                 lib.Notifications:Notification({Title = "UI Hidden", Text = "Press "..toggleKey.Name.." to show the UI"})
