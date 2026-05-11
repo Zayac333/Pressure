@@ -250,22 +250,22 @@ local KEYCARDS = {
 }
 
 local ITEM_PATTERNS = {
-    { pattern = "Lantern",      label = "",       fill = Color3.fromRGB(255, 200, 0),   outline = Color3.fromRGB(255, 230, 100) },
-    { pattern = "Flashlight",   label = "",    fill = Color3.fromRGB(200, 200, 255), outline = Color3.fromRGB(255, 255, 255) },
-    { pattern = "Blacklight",   label = "",    fill = Color3.fromRGB(150, 0,   255), outline = Color3.fromRGB(200, 100, 255) },
-    { pattern = "Medkit",       label = "",        fill = Color3.fromRGB(255, 50,  50),  outline = Color3.fromRGB(255, 150, 150) },
-    { pattern = "HealthBoost",  label = "",  fill = Color3.fromRGB(255, 100, 100), outline = Color3.fromRGB(255, 180, 180) },
-    { pattern = "Defib",        label = "",         fill = Color3.fromRGB(255, 0,   100), outline = Color3.fromRGB(255, 100, 180) },
-    { pattern = "FlashBeacon",  label = "",  fill = Color3.fromRGB(255, 255, 50),  outline = Color3.fromRGB(255, 255, 150) },
-    { pattern = "Scanner",      label = "",       fill = Color3.fromRGB(0,   255, 200), outline = Color3.fromRGB(100, 255, 230) },
-    { pattern = "^Book$",       label = "",          fill = Color3.fromRGB(180, 120, 40),  outline = Color3.fromRGB(220, 170, 100) },
-    { pattern = "CodeBreacher", label = "", fill = Color3.fromRGB(0,   200, 255), outline = Color3.fromRGB(100, 230, 255) },
-    { pattern = "Gummylight",   label = "",    fill = Color3.fromRGB(255, 100, 200), outline = Color3.fromRGB(255, 180, 230) },
-    { pattern = "WindupLight",  label = "",  fill = Color3.fromRGB(255, 180, 50),  outline = Color3.fromRGB(255, 210, 120) },
-    { pattern = "SPRINT",       label = "",        fill = Color3.fromRGB(50,  255, 100), outline = Color3.fromRGB(150, 255, 180) },
-    { pattern = "ToyRemote",    label = "",    fill = Color3.fromRGB(100, 100, 255), outline = Color3.fromRGB(180, 180, 255) },
-    { pattern = "Battery",      label = "",       fill = Color3.fromRGB(255, 230, 0),   outline = Color3.fromRGB(255, 245, 100) },
-    { pattern = "[Nn]eostyk",   label = "",       fill = Color3.fromRGB(0,   255, 150), outline = Color3.fromRGB(100, 255, 200) },
+    { pattern = "Lantern",      label = "Фонарь",       fill = Color3.fromRGB(255, 200, 0),   outline = Color3.fromRGB(255, 230, 100) },
+    { pattern = "Flashlight",   label = "Фонарик",    fill = Color3.fromRGB(200, 200, 255), outline = Color3.fromRGB(255, 255, 255) },
+    { pattern = "Blacklight",   label = "Фонарик против степашек",    fill = Color3.fromRGB(150, 0,   255), outline = Color3.fromRGB(200, 100, 255) },
+    { pattern = "Medkit",       label = "Медкит",        fill = Color3.fromRGB(255, 50,  50),  outline = Color3.fromRGB(255, 150, 150) },
+    { pattern = "HealthBoost",  label = "Хилка",  fill = Color3.fromRGB(255, 100, 100), outline = Color3.fromRGB(255, 180, 180) },
+    { pattern = "Defib",        label = "Дефибрилятор",         fill = Color3.fromRGB(255, 0,   100), outline = Color3.fromRGB(255, 100, 180) },
+    { pattern = "FlashBeacon",  label = "Флеш Маяк",  fill = Color3.fromRGB(255, 255, 50),  outline = Color3.fromRGB(255, 255, 150) },
+    { pattern = "Scanner",      label = "Сканер",       fill = Color3.fromRGB(0,   255, 200), outline = Color3.fromRGB(100, 255, 230) },
+    { pattern = "^Book$",       label = "Книга",          fill = Color3.fromRGB(180, 120, 40),  outline = Color3.fromRGB(220, 170, 100) },
+    { pattern = "CodeBreacher", label = "Взлом Замка", fill = Color3.fromRGB(0,   200, 255), outline = Color3.fromRGB(100, 230, 255) },
+    { pattern = "Gummylight",   label = "Зеленый фонарь",    fill = Color3.fromRGB(255, 100, 200), outline = Color3.fromRGB(255, 180, 230) },
+    { pattern = "WindupLight",  label = "Синий Фонарик",  fill = Color3.fromRGB(255, 180, 50),  outline = Color3.fromRGB(255, 210, 120) },
+    { pattern = "SPRINT",       label = "Спринт",        fill = Color3.fromRGB(50,  255, 100), outline = Color3.fromRGB(150, 255, 180) },
+    { pattern = "ToyRemote",    label = "Шиза",    fill = Color3.fromRGB(100, 100, 255), outline = Color3.fromRGB(180, 180, 255) },
+    { pattern = "Battery",      label = "Батарейка",       fill = Color3.fromRGB(255, 230, 0),   outline = Color3.fromRGB(255, 245, 100) },
+    { pattern = "[Nn]eostyk",   label = "НеоСтик",       fill = Color3.fromRGB(0,   255, 150), outline = Color3.fromRGB(100, 255, 200) },
 }
 
 local MONSTERS = {
@@ -758,14 +758,15 @@ pageVisual:AddToggle({Caption = "Двери ЕСП", Default = false, Callback =
     local e = game:GetService("ReplicatedStorage").Events.CurrentRoomNumber
 
     local function addDoorESP(d)
-        if d:FindFirstChild("ESP_Label") then return end -- вже є ESP
+        if d:FindFirstChild("ESP_Label") then return end
         local door = d:FindFirstChild("Door") or d
-        local locked = d:FindFirstChild("Lock", math.huge)
+        local locked = d:FindFirstChild("Lock", true)
         local cr = e:InvokeServer()
         AddESP(door, {
             label = "Room " .. (cr + 1) .. (locked and "\n[ Locked ]" or ""),
             fill = locked and Color3.fromRGB(100,175,255) or Color3.fromRGB(0,255,100),
-            outline = Color3.new(1,1,1)
+            outline = Color3.new(1,1,1),
+            size = 10 -- Встанови бажаний розмір тут
         })
     end
 
