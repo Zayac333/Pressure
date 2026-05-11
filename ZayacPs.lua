@@ -370,7 +370,11 @@ local function AddESP(part, config)
     lbl.TextColor3 = config.textColor or Color3.new(1,1,1)
     lbl.TextStrokeColor3 = Color3.fromRGB(0,0,0)
     lbl.TextStrokeTransparency = 0.3
-    lbl.TextScaled = true
+    
+    -- ЗМІНИ ТУТ:
+    lbl.TextScaled = false -- Вимикаємо авторозтягування
+    lbl.TextSize = config.size or 14 -- Використовуємо розмір з конфігу або 14 за замовчуванням
+    
     lbl.Font = Enum.Font.GothamBold
     lbl.Parent = bb
 end
