@@ -393,7 +393,7 @@ local pageVisual = window:AddPage({Title = "Визуал/ЕСП"})
 pageVisual:AddLabel({Caption = "Лут"})
 
 -- Keycard ESP
-pageVisual:AddToggle({Caption = "Есп Карт и ппаролей", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Есп Карт и паролей", Default = false, Callback = function(b)
     vals.ESP.KeycardESP = b
     if b then
         -- первинне сканування
