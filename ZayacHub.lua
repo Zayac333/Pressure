@@ -387,13 +387,13 @@ end
 -- ВКЛАДКА VISUAL (з групами як у Pressure1)
 -- ================================
 
-local pageVisual = window:AddPage({Title = "Visual"})
+local pageVisual = window:AddPage({Title = "Визуал/ЕСП"})
 
 -- Items
-pageVisual:AddLabel({Caption = "Items"})
+pageVisual:AddLabel({Caption = "Лут"})
 
 -- Keycard ESP
-pageVisual:AddToggle({Caption = "Keycard ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Есп Карт и ппаролей", Default = false, Callback = function(b)
     vals.ESP.KeycardESP = b
     if b then
         -- первинне сканування
@@ -415,7 +415,7 @@ pageVisual:AddToggle({Caption = "Keycard ESP", Default = false, Callback = funct
 end})
 
 -- Currency & Blueprint ESP
-pageVisual:AddToggle({Caption = "Currency & Blueprint ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Деньги ЕСП", Default = false, Callback = function(b)
     vals.ESP.CurrencyESP = b
     if b then
         for _, obj in ipairs(workspace:GetDescendants()) do
@@ -438,7 +438,7 @@ pageVisual:AddToggle({Caption = "Currency & Blueprint ESP", Default = false, Cal
 end})
 
 -- Item ESP
-pageVisual:AddToggle({Caption = "Item ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Вещи ЕСП", Default = false, Callback = function(b)
     vals.ESP.ItemESP = b
     if b then
         for _, obj in ipairs(workspace:GetDescendants()) do
@@ -461,7 +461,7 @@ pageVisual:AddToggle({Caption = "Item ESP", Default = false, Callback = function
 end})
 
 -- Monster ESP
-pageVisual:AddToggle({Caption = "Monster ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Монстры ЕСП", Default = false, Callback = function(b)
     vals.ESP.MonsterESP = b
     monsterEspActive = b
     local tracked = {}
@@ -530,10 +530,10 @@ pageVisual:AddToggle({Caption = "Monster ESP", Default = false, Callback = funct
 end})
 
 -- Monster Locker ESP
-pageVisual:AddToggle({Caption = "Monster Locker ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "ЕСП фейк шкафов", Default = false, Callback = function(b)
     vals.ESP.MonsterLockerESP = b
     local cfg = {
-        label = "⚠ MONSTER LOCKER",
+        label = "⚠ ФЕЙК ШКАФ",
         fill = Color3.fromRGB(200,0,0),
         outline = Color3.fromRGB(255,80,80),
         textColor = Color3.fromRGB(255,80,80),
@@ -570,10 +570,10 @@ pageVisual:AddToggle({Caption = "Monster Locker ESP", Default = false, Callback 
 end})
 
 --Fake door ESP
-pageVisual:AddToggle({Caption = "Fake Door ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Фейк двери ЕСП", Default = false, Callback = function(b)
     vals.ESP.FakeDoorESP = b
     local cfg = {
-        label = "✖ FAKE DOOR",
+        label = "✖ ФЕЙК ДВЕРЬ",
         fill = Color3.fromRGB(180,0,0),
         outline = Color3.fromRGB(255,0,0),
         textColor = Color3.fromRGB(255,0,0),
@@ -612,7 +612,7 @@ pageVisual:AddToggle({Caption = "Fake Door ESP", Default = false, Callback = fun
 end})
 
 --Generator ESP
-pageVisual:AddToggle({Caption = "Generator ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Генераторы ЕСП", Default = false, Callback = function(b)
     vals.ESP.GeneratorESP = b
     generatorActive = b
     local trackedGenerators = {}
@@ -692,7 +692,7 @@ pageVisual:AddToggle({Caption = "Generator ESP", Default = false, Callback = fun
 end})
 
 -- Monster Alert (оновлено з Monster.txt)
-pageVisual:AddToggle({Caption = "Monster Alert", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Оповещение о монстрах", Default = false, Callback = function(b)
     vals.MonsterAlert = b
     if b then
         local screenGui = Instance.new("ScreenGui")
@@ -753,7 +753,7 @@ pageVisual:AddToggle({Caption = "Monster Alert", Default = false, Callback = fun
 end})
 
 -- Door ESP (Pressure2 logic)
-pageVisual:AddToggle({Caption = "Door ESP", Default = false, Callback = function(b)
+pageVisual:AddToggle({Caption = "Двери ЕСП", Default = false, Callback = function(b)
     vals.ESP.DoorESP = b
     local e = game:GetService("ReplicatedStorage").Events.CurrentRoomNumber
 
@@ -809,8 +809,8 @@ pageVisual:AddToggle({Caption = "Door ESP", Default = false, Callback = function
 end})
 
 -- World
-local pageWorld = window:AddPage({Title = "World"})
-pageWorld:AddToggle({Caption = "Fullbright", Default = false, Callback = function(b)
+local pageWorld = window:AddPage({Title = "Мир/освещение"})
+pageWorld:AddToggle({Caption = "Фулл брайт", Default = false, Callback = function(b)
     if b then
         game:GetService("Lighting").Brightness = 2
         game:GetService("Lighting").Ambient = Color3.new(1,1,1)
@@ -825,7 +825,7 @@ end})
 -- ВКЛАДКА BYPASS
 -- ================================
 
-local pageBypass = window:AddPage({Title = "Bypasses"})
+local pageBypass = window:AddPage({Title = "Анти"})
 
 -- ===== Bypass throttling core =====
 local bypassQueue = {}
@@ -935,96 +935,96 @@ local function setupRemoval(nameTable, valKey, connsVar)
 end
 
 -- Anti Eyefestation
-pageBypass:AddToggle({Caption = "Anti Eyefestation", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Анти акула", Default = false, Callback = function(b)
     vals.AntiEyefestation = b
     local EF = { Eyefestation=true, EngragedEyeInfestation=true }
     setupRemoval(EF, "AntiEyefestation", "eyefestationConns")
 end})
 
 -- Remove Pandemonium
-pageBypass:AddToggle({Caption = "Remove Pandemonium", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Анти ПАНДЕМОНИУМ", Default = false, Callback = function(b)
     vals.RemovePandemonium = b
     setupRemoval(PANDEMONIUM_NAMES, "RemovePandemonium", "pandemoniumConns")
 end})
 
 -- Remove WallDweller
-pageBypass:AddToggle({Caption = "Remove WallDweller", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Стену", Default = false, Callback = function(b)
     vals.RemoveWallDweller = b
     local WD = { WallDweller=true, MeatWallDweller=true, RottenWallDweller=true, WallDwellers=true }
     setupRemoval(WD, "RemoveWallDweller", "wallDwellerConns")
 end})
 
 -- Remove Bouncer
-pageBypass:AddToggle({Caption = "Remove Bouncer", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать вышибалу", Default = false, Callback = function(b)
     vals.RemoveBouncer = b
     local B = { Bouncer=true }
     setupRemoval(B, "RemoveBouncer", "bouncerConns")
 end})
 
 -- Remove Skeleton Head
-pageBypass:AddToggle({Caption = "Remove Skeleton Head", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать башку скелета", Default = false, Callback = function(b)
     vals.RemoveSkeletonHead = b
     local S = { SkeletonHead=true }
     setupRemoval(S, "RemoveSkeletonHead", "skeletonConns")
 end})
 
 -- Remove Statue
-pageBypass:AddToggle({Caption = "Remove Statue", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать статую(бесконечный режим)", Default = false, Callback = function(b)
     vals.RemoveStatue = b
     local ST = { StatueRoot=true }
     setupRemoval(ST, "RemoveStatue", "statueConns")
 end})
 
 -- Remove DiVine
-pageBypass:AddToggle({Caption = "Remove DiVine", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Растения(нельзя ходить по траве)", Default = false, Callback = function(b)
     vals.RemoveDiVine = b
     local DV = { DiVine=true, DiVineRoot=true }
     setupRemoval(DV, "RemoveDiVine", "divineConns")
 end})
 
 -- Remove Searchlights
-pageBypass:AddToggle({Caption = "Remove Searchlights", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Прожектора", Default = false, Callback = function(b)
     vals.RemoveSearchlights = b
     local SL = { Searchlights=true }
     setupRemoval(SL, "RemoveSearchlights", "searchlightConns")
 end})
 
 -- Remove Monster Locker
-pageBypass:AddToggle({Caption = "Remove Monster Locker", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Фейк Шкафы", Default = false, Callback = function(b)
     vals.RemoveMonsterLocker = b
     local ML = { MonsterLocker=true }
     setupRemoval(ML, "RemoveMonsterLocker", "lockerConns")
 end})
 
 pageBypass:AddSeparator()
-pageBypass:AddLabel({Caption = "Spawns"})
+pageBypass:AddLabel({Caption = "Предметы"})
 
 -- Remove Turrets
-pageBypass:AddToggle({Caption = "Remove Turrets", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Турели", Default = false, Callback = function(b)
     vals.RemoveTurrets = b
     local TR = { Turret=true, TurretSpawn=true }
     setupRemoval(TR, "RemoveTurrets", "turretConns")
 end})
 
 -- Remove Tripwires
-pageBypass:AddToggle({Caption = "Remove Tripwires", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Мины на дверях", Default = false, Callback = function(b)
     vals.RemoveTripwires = b
     local TW = { Tripwire=true, TripwireSpawn=true }
     setupRemoval(TW, "RemoveTripwires", "tripwireConns")
 end})
 
 -- Remove Landmines
-pageBypass:AddToggle({Caption = "Remove Landmines", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Лежачии Мины", Default = false, Callback = function(b)
     vals.RemoveLandmines = b
     local LM = { Landmine=true, LandmineSpawn=true }
     setupRemoval(LM, "RemoveLandmines", "landmineConns")
 end})
 
 pageBypass:AddSeparator()
-pageBypass:AddLabel({Caption = "Encounters"})
+pageBypass:AddLabel({Caption = "Паркур"})
 
 -- Remove Firewall
-pageBypass:AddToggle({Caption = "Remove Firewall", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Убрать Огненую Стену", Default = false, Callback = function(b)
     vals.RemoveFirewall = b
     local FW = { Firewall=true }
     setupRemoval(FW, "RemoveFirewall", "firewallConns")
@@ -1035,10 +1035,10 @@ end})
 -- ВКЛАДКА MOVEMENT (з Pressure1)
 -- ================================
 
-local pageMove = window:AddPage({Title = "Movement"})
+local pageMove = window:AddPage({Title = "Движение"})
 
 -- Noclip toggle
-pageMove:AddToggle({Caption = "Noclip", Default = false, Callback = function(b)
+pageMove:AddToggle({Caption = "Ноуклип(проходка сквозь стени)", Default = false, Callback = function(b)
     if b then
         vals.NoclipActive = true
         vals.NoclipLoop = game:GetService("RunService").Stepped:Connect(function()
@@ -1058,7 +1058,7 @@ pageMove:AddToggle({Caption = "Noclip", Default = false, Callback = function(b)
 end})
 
 -- Speed Hack toggle
-pageMove:AddToggle({Caption = "Speed Hack", Default = false, Callback = function(b)
+pageMove:AddToggle({Caption = "Спиды", Default = false, Callback = function(b)
     vals.SpeedHack = b
     getgenv().SpeedEnabled = b
 end})
@@ -1114,22 +1114,22 @@ pageMove:AddSlider({
 -- ВКЛАДКА INTERACT (з Pressure2)
 -- ================================
 
-local pageInteract = window:AddPage({Title = "Interact"})
+local pageInteract = window:AddPage({Title = "Взаимодействие"})
 
 -- Auto loot currency
-pageInteract:AddToggle({Caption = "Auto loot currency", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "Авто лут деняг", Default = false, Callback = function(b)
     vals.AutoGrabCurrency = b
 end})
 
 pageInteract:AddSeparator()
 
 -- Instant interact
-pageInteract:AddToggle({Caption = "Instant proximity prompt interact", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "Быстрое взаимодействие(не работает)", Default = false, Callback = function(b)
     vals.InstantInteract = b
 end})
 
 -- Notify monsters
-pageInteract:AddToggle({Caption = "Notify monsters", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "Оповещение о монстрах", Default = false, Callback = function(b)
     vals.NotifyMonsters = b
 end})
 
@@ -1151,22 +1151,22 @@ pageInteract:AddSlider({
 pageInteract:AddSeparator()
 
 -- Better doors
-pageInteract:AddToggle({Caption = "Open doors no matter what your camera rotation is", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "Лучшее откритие дверей( нету разницы как повернута камера)", Default = false, Callback = function(b)
     vals.BetterDoors = b
 end})
 
 -- Auto input code
-pageInteract:AddToggle({Caption = "Auto input door code (uses bruteforcing)", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "авто ввод кода(не работает)", Default = false, Callback = function(b)
     vals.AutoInputCode = b
 end})
 
 -- Teleport to door lock
-pageInteract:AddToggle({Caption = "Teleport to enter code", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "Телепорт к вводу кода(баганое)", Default = false, Callback = function(b)
     vals.TeleportToDoorLock = b
 end})
 
 -- Button for bruteforce
-pageInteract:AddButton({Caption = "Bruteforce closest door codelock", Callback = function()
+pageInteract:AddButton({Caption = "Авто дверной замок", Callback = function()
     for _, door in doorCodes do
         if door and door.Parent and (door.Parent.Position - game.Players.LocalPlayer.Character:GetPivot().Position).Magnitude < 9.5 then
             bruteforce(door, true)
