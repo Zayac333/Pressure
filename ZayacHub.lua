@@ -942,7 +942,7 @@ pageBypass:AddToggle({Caption = "Анти акула", Default = false, Callback
 end})
 
 -- Remove Pandemonium
-pageBypass:AddToggle({Caption = "Анти ПАНДЕМОНИУМ", Default = false, Callback = function(b)
+pageBypass:AddToggle({Caption = "Анти ПАНДЕМОНИУМ!!!!!", Default = false, Callback = function(b)
     vals.RemovePandemonium = b
     setupRemoval(PANDEMONIUM_NAMES, "RemovePandemonium", "pandemoniumConns")
 end})
@@ -1065,7 +1065,7 @@ end})
 
 -- Speed Value slider
 pageMove:AddSlider({
-    Caption = "Speed Value",
+    Caption = "Значение Скорости",
     Default = 16,
     Min = 16,
     Max = 300,
@@ -1094,7 +1094,7 @@ end)
 
 -- JumpPower slider
 pageMove:AddSlider({
-    Caption = "JumpPower",
+    Caption = "Высота прыжка",
     Default = 50,
     Min = 50,
     Max = 200,
@@ -1124,7 +1124,7 @@ end})
 pageInteract:AddSeparator()
 
 -- Instant interact
-pageInteract:AddToggle({Caption = "Быстрое взаимодействие(не работает)", Default = false, Callback = function(b)
+pageInteract:AddToggle({Caption = "Взаемодействие на дистанции(50/50)", Default = false, Callback = function(b)
     vals.InstantInteract = b
 end})
 
