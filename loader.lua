@@ -289,15 +289,15 @@ local function getText(obj)
 	if money then
 		return "$" .. money
 	elseif obj.Name == "SPRINT" then
-		return "Sprint"
+		return "Спринт"
 	elseif obj.Name == "HighLight" then
 		return "Highlight"
 	elseif obj.Name == "Defib" then
-		return "Defibrillator"
+		return "Дефибрилятор"
 	elseif obj.Name:lower():match("crate") then
 		return "Crate"
 	elseif obj.Name:lower():match("battery") then
-		return "Battery"
+		return "Батарейка"
 	end
 	
 	return insertCum(obj.Name):gsub("Crate ", ""):gsub("Big ", ""):gsub("Large ", ""):gsub("Small ", "")
@@ -516,14 +516,10 @@ local window = lib:MakeWindow({Title = "ZayacHub - Pressure", CloseCallback = fu
 	end
 end}, true)
 
-local page = window:AddPage({Title = "! READ ME NOW !"})
-page:AddLabel({Caption = "Because pressure has been updated, ZayacHub got patched"})
-page:AddLabel({Caption = "At this moment script being fully rewrited"})
-page:AddLabel({Caption = "Expect more features to be added"})
 
-local page = window:AddPage({Title = "Bypasses"})
+local page = window:AddPage({Title = "Анти"})
 if deleted then
-	page:AddToggle({Caption = "No damage", Default = false, Callback = function(b)
+	page:AddToggle({Caption = "Без домага", Default = false, Callback = function(b)
 		vals.NoLocalDamage = b
 	end})
 	page:AddLabel({Caption = "NOTE: If your executor is bad (Solara, Xeno), better DON'T USE No Damage"})
@@ -532,31 +528,31 @@ if deleted then
 	page:AddSeparator()
 end
 
-page:AddToggle({Caption = "Auto hide", Default = false, Callback = function(b)
+page:AddToggle({Caption = "Авто прятанье", Default = false, Callback = function(b)
 	vals.AutoHide = b
 end})
-page:AddToggle({Caption = "Spectate entity while auto hiding", Default = false, Callback = function(b)
+page:AddToggle({Caption = "Наблюдать за монстрами пока прячешся", Default = false, Callback = function(b)
 	vals.SpectateEntity = b
 end})
 
 page:AddSeparator()
 
-page:AddToggle({Caption = "Anti Searchlights", Default = false, Callback = function(b)
+page:AddToggle({Caption = "Анти прожектора", Default = false, Callback = function(b)
 	vals.AntiSearchlights = b
 end})
-page:AddToggle({Caption = "Anti Eyefestation", Default = false, Callback = function(b)
+page:AddToggle({Caption = "Анти акула", Default = false, Callback = function(b)
 	vals.AntiEyefestation = b
 end})
 
-local page = window:AddPage({Title = "Interact"})
-page:AddToggle({Caption = "Auto loot currency", Default = false, Callback = function(b)
+local page = window:AddPage({Title = "Взаимодействие"})
+page:AddToggle({Caption = "Авто лут деняг", Default = false, Callback = function(b)
 	vals.AutoGrabCurrency = b
 end})
 page:AddSeparator()
-page:AddToggle({Caption = "Instant proximity prompt interact", Default = false, Callback = function(b)
+page:AddToggle({Caption = "Быстрое Откривание(не робит)", Default = false, Callback = function(b)
 	vals.InstantInteract = b
 end})
-page:AddToggle({Caption = "Notify monsters", Default = false, Callback = function(b)
+page:AddToggle({Caption = "Оповещение о монстрах", Default = false, Callback = function(b)
 	vals.NotifyMonsters = b
 end})
 page:AddSlider({Caption = "Extra proximity prompt activation range", Default = 0, Min = 0, Max = 100, Step = 0.25, Callback = function(b)
