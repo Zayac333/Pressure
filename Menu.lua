@@ -6,26 +6,24 @@ end
 
 local t = getGlobalTable()
 
-if t._FIRELIB then
-    return t._FIRELIB
+-- Always fetch the current library. Reusing _FIRELIB here keeps stale MakeWindow code
+-- alive after ParentLibrary.lua has been updated.
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/ParentLibrary.lua?v=4"))()
+if not lib then
+    error("Fatal error while loading UI library: Loadstring did not return anything!")
 end
 
-local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/ParentLibrary.lua?v=3"))()
-if not lib and not t._FIRELIB then error("Fatal error while loading UI library: Loadstring did not return anything!") end
-lib = lib or t._FIRELIB
-
-if not t.EAGLE then
-    t.EAGLE = true
-    local mw = lib.MakeWindow
-    local fhop = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/OnlyPage.lua"))()
-    lib.MakeWindow = function(self, options, fireHubWindow)
-        local window = mw(self, options)
-        if fireHubWindow then
-            coroutine.wrap(fhop)(window)
-        end
-        return window
+local fhop = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/OnlyPage.lua"))()
+local makeWindow = lib.MakeWindow
+lib.MakeWindow = function(self, options, fireHubWindow)
+    local window = makeWindow(self, options)
+    if fireHubWindow then
+        coroutine.wrap(fhop)(window)
     end
+    return window
 end
-t._FIRELIB = t._FIRELIB or lib
+
+t.EAGLE = true
+t._FIRELIB = lib
 
 return lib
