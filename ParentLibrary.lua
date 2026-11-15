@@ -4969,31 +4969,10 @@ local lib; lib = {
             page:AddTextBox({Text = "Config name", NeedEnter = false, Callback = function(text)
                 currentConfig = text
             end})
-            local suffix = ""
             local prefix = ""
             local format = "json"
-            local folder = "FireLib_Configs"
-            local folderReady = false
-            if isfolder then
-                local ok, exists = pcall(isfolder, folder)
-                folderReady = ok and exists == true
-            end
-            if not folderReady and makefolder then
-                local ok = pcall(makefolder, folder)
-                folderReady = ok
-                if isfolder then
-                    local checkOk, exists = pcall(isfolder, folder)
-                    folderReady = checkOk and exists == true
-                end
-            end
-            if folderReady then
-                prefix = folder.."\\"
-                suffix = "-Config."..format
-            else
-                suffix = "-FireLib_Config."..format
-            end
-            suffix = ("-"..game:GetService("HttpService"):UrlEncode(window.HolderFrame.Title.Text)..suffix):gsub("%%", "x")
-            page:AddButton({Text = "Save Config", Callback = function()
+            -- Save to the executor's root directory; folder creation is not supported by every executor.
+            local suffix = ("-"..game:GetService("HttpService"):UrlEncode(window.HolderFrame.Title.Text).."-FireLib_Config."..format):gsub("%%", "x")            page:AddButton({Text = "Save Config", Callback = function()
                 local s,got = pcall(readfile,prefix..currentConfig..suffix)
                 if s then
                     lib.Notifications:ChooseNotification({Callback = function(b)
@@ -5087,34 +5066,10 @@ local lib; lib = {
             page:AddTextBox({Text = "Theme name", NeedEnter = false, Callback = function(text)
                 currentConfig = text
             end, IgnoreConfigs = true})
-            local suffix = ""
             local prefix = ""
             local format = "wave"
-            local folder = "FireLib_Themes"
-            local folderReady = false
-            if isfolder then
-                local ok, exists = pcall(isfolder, folder)
-                folderReady = ok and exists == true
-            end
-            if not folderReady and makefolder then
-                local createOk = pcall(makefolder, folder)
-                if isfolder then
-                    local ok, exists = pcall(isfolder, folder)
-                    folderReady = ok and exists == true
-                else
-                    -- Some executors do not expose isfolder; rely on makefolder succeeding.
-                    folderReady = createOk
-                end
-            end
-            if folderReady then
-                prefix = folder.."\\"
-                suffix = "-Theme."..format
-            else
-                -- Keep themes usable when the executor blocks directory creation.
-                suffix = "-"..folder.."-Theme."..format
-            end
-            suffix = "-"..suffix
-            page:AddButton({Text = "Save Theme", Callback = function()
+            -- Save to the executor's root directory; folder creation is not supported by every executor.
+            local suffix = "-FireLib_Theme."..format            page:AddButton({Text = "Save Theme", Callback = function()
                 local s,got = pcall(readfile,prefix..currentConfig..suffix)
                 if s then
                     lib.Notifications:ChooseNotification({Callback = function(b)
