@@ -117,7 +117,9 @@ local function handleDescendant(obj)
             if espTarget and espTarget.Parent and espTarget.Parent:IsA("Model") then
                 espTarget = espTarget.Parent
             end
-            pcall(esp, espTarget, {HighlightEnabled = false, Color = getColor(espTarget), Text = getText(espTarget), ESPName = "ItemESP"})
+            if type(esp) == "function" and type(getColor) == "function" and type(getText) == "function" then
+                pcall(esp, espTarget, {HighlightEnabled = false, Color = getColor(espTarget), Text = getText(espTarget), ESPName = "ItemESP"})
+            end
         end
 
         return
@@ -128,7 +130,7 @@ local function handleDescendant(obj)
         local name = obj.Parent.Name:lower()
         if not (name:find("ambience") or name:find("orb") or name:find("vent") or name:find("proxy")) then
             if obj.Parent.Parent == workspace or obj.Parent.Parent == workspace.GameplayFolder.Monsters then
-                onMonster(obj.Parent)
+                if type(onMonster) == "function" then onMonster(obj.Parent) end
             end
         end
         return
@@ -137,9 +139,11 @@ local function handleDescendant(obj)
     -- Моделі: двері, монстри
     if obj:IsA("Model") then
         if obj.Parent and obj.Parent.Name == "Entrances" then
-            esp(obj:WaitForChild("Door", 2.5) or obj, { HighlightEnabled = true, Color = obj:FindFirstChild("Lock", math.huge) and Color3.fromRGB(100, 175, 255) or Color3.fromRGB(0, 255, 100), Text = "Room " .. ( (game:GetService("ReplicatedStorage").Events.CurrentRoomNumber:InvokeServer() or 0) + 1 ) .. (obj:FindFirstChild("Lock", math.huge) and "\n[ Locked ]" or ""), ESPName = "DoorESP" })
+                if type(esp) == "function" then
+                    esp(obj:WaitForChild("Door", 2.5) or obj, { HighlightEnabled = true, Color = obj:FindFirstChild("Lock", math.huge) and Color3.fromRGB(100, 175, 255) or Color3.fromRGB(0, 255, 100), Text = "Room " .. ( (game:GetService("ReplicatedStorage").Events.CurrentRoomNumber:InvokeServer() or 0) + 1 ) .. (obj:FindFirstChild("Lock", math.huge) and "\n[ Locked ]" or ""), ESPName = "DoorESP" })
+                end
         elseif obj.Parent == workspace.GameplayFolder.Monsters or obj.Name == "Eyefestation" then
-            onMonster(obj)
+            if type(onMonster) == "function" then onMonster(obj) end
         end
         return
     end
