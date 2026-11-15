@@ -10,7 +10,7 @@ if t._FIRELIB then
     return t._FIRELIB
 end
 
-local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/ParentLibrary.lua"))()
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zayac333/Pressure/main/ParentLibrary.lua?v=2"))()
 if not lib and not t._FIRELIB then error("Fatal error while loading UI library: Loadstring did not return anything!") end
 lib = lib or t._FIRELIB
 
