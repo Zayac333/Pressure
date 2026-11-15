@@ -3327,8 +3327,8 @@ local lib; lib = {
                         end
                         pageButton.Selection.Visible = true
                         task.wait()
-                        local frame = page:FindFirstChild("Frame")
-                        if frame then
+                        local frame = page and page.Parent and page:FindFirstChild("Frame")
+                        if frame and frame:IsA("GuiObject") then
                             frame.Visible = false
                         end
                     end
@@ -3336,8 +3336,8 @@ local lib; lib = {
 
                 task.spawn(function()
                     while window and window.Parent and task.wait() do -- mobile workaround for AutomaticCanvasSize
-                        local frame = page:FindFirstChild("Frame")
-                        if frame then
+                        local frame = page and page.Parent and page:FindFirstChild("Frame")
+                        if frame and frame:IsA("GuiObject") then
                             frame.Visible = true
                             frame.Size = UDim2.new(math.random(0, 100)/100, 0, 0, 1)
                         else
@@ -5091,12 +5091,27 @@ local lib; lib = {
             local prefix = ""
             local format = "wave"
             local folder = "FireLib_Themes"
-            if makefolder then
-                makefolder(folder)
+            local folderReady = false
+            if isfolder then
+                local ok, exists = pcall(isfolder, folder)
+                folderReady = ok and exists == true
+            end
+            if not folderReady and makefolder then
+                local createOk = pcall(makefolder, folder)
+                if isfolder then
+                    local ok, exists = pcall(isfolder, folder)
+                    folderReady = ok and exists == true
+                else
+                    -- Some executors do not expose isfolder; rely on makefolder succeeding.
+                    folderReady = createOk
+                end
+            end
+            if folderReady then
                 prefix = folder.."\\"
                 suffix = "-Theme."..format
             else
-                suffix = "-"..folder.."."..format
+                -- Keep themes usable when the executor blocks directory creation.
+                suffix = "-"..folder.."-Theme."..format
             end
             suffix = "-"..suffix
             page:AddButton({Text = "Save Theme", Callback = function()
