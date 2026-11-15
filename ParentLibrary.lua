@@ -3327,14 +3327,22 @@ local lib; lib = {
                         end
                         pageButton.Selection.Visible = true
                         task.wait()
-                        page.Frame.Visible = false
+                        local frame = page:FindFirstChild("Frame")
+                        if frame then
+                            frame.Visible = false
+                        end
                     end
                 end)
 
                 task.spawn(function()
-                    while window and window.Parent and task.wait() do -- that shit is created cuz of mobile execs: there's a roblox bug with AutomaticCanvasSize
-                        page.Frame.Visible = true
-                        page.Frame.Size = UDim2.new(math.random(0, 100)/100, 0, 0, 1)
+                    while window and window.Parent and task.wait() do -- mobile workaround for AutomaticCanvasSize
+                        local frame = page:FindFirstChild("Frame")
+                        if frame then
+                            frame.Visible = true
+                            frame.Size = UDim2.new(math.random(0, 100)/100, 0, 0, 1)
+                        else
+                            break
+                        end
                     end
                 end)
 
@@ -4965,8 +4973,20 @@ local lib; lib = {
             local prefix = ""
             local format = "json"
             local folder = "FireLib_Configs"
-            if makefolder then
-                makefolder(folder)
+            local folderReady = false
+            if isfolder then
+                local ok, exists = pcall(isfolder, folder)
+                folderReady = ok and exists == true
+            end
+            if not folderReady and makefolder then
+                local ok = pcall(makefolder, folder)
+                folderReady = ok
+                if isfolder then
+                    local checkOk, exists = pcall(isfolder, folder)
+                    folderReady = checkOk and exists == true
+                end
+            end
+            if folderReady then
                 prefix = folder.."\\"
                 suffix = "-Config."..format
             else
